@@ -1,0 +1,83 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Courses & Content
+    match /courses/{courseId} {
+      allow read: if isAdmin() || resource.data.status == 'published';
+      allow write: if isAdmin();
+
+      match /modules/{moduleId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+      }
+
+      match /lessons/{lessonId} {
+        allow read: if isAdmin() || resource.data.status == 'published';
+        allow write: if isAdmin();
+
+        match /questions/{qId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
+
+        match /answerKeys/{qId} {
+          allow read, write: if isAdmin();
+        }
+      }
+
+      match /examQuestions/{qId} {
+        allow read, write: if isAdmin();
+      }
+
+      match /examKeys/{qId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Enrollments (Read by owner/admin, created/updated via Cloud Functions or Admin)
+    match /enrollments/{enrollmentId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Student Progress (Read by owner/admin, updated ONLY via Cloud Functions or Admin)
+    match /progress/{progressId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Exam Attempts (Read by owner/admin, updated ONLY via Cloud Functions or Admin)
+    match /examAttempts/{attemptId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Certificates (Read by anyone if unrevoked or owner/admin, written ONLY by server/admin)
+    match /certificates/{certificateId} {
+      allow read: if true; // Public verification allowed
+      allow write: if isAdmin();
+    }
+  }
+}

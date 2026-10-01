@@ -45,6 +45,13 @@ export default function FinalExamScreen() {
     },
   });
 
+  const mutateRef = React.useRef(submitMutation.mutate);
+  useEffect(() => {
+    mutateRef.current = submitMutation.mutate;
+  }, [submitMutation.mutate]);
+
+  const autoSubmittedRef = React.useRef(false);
+
   // Countdown timer effect
   useEffect(() => {
     if (!expiresAt) return;
@@ -53,15 +60,15 @@ export default function FinalExamScreen() {
       setRemainingSec(diff);
       if (diff <= 0) {
         clearInterval(interval);
-        // Auto-submit when time expires
-        if (!submitMutation.data && !submitMutation.isPending) {
-          submitMutation.mutate();
+        if (!autoSubmittedRef.current) {
+          autoSubmittedRef.current = true;
+          mutateRef.current();
         }
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [expiresAt, submitMutation]);
+  }, [expiresAt]);
 
   const result = submitMutation.data;
 

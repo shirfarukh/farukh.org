@@ -1,86 +1,275 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
-import { Stack, useRouter, usePathname, Redirect } from 'expo-router';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { Stack, useRouter, usePathname } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/features/auth/useAuth';
-import { ActivityIndicator } from 'react-native';
+import { AppLogo } from '../../src/components/ui/AppLogo';
+import { LanguageSwitcher } from '../../src/components/ui/LanguageSwitcher';
 
 export default function StudentLayout() {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (loading) {
     return (
       <View className="flex-1 bg-surface-dark justify-center items-center">
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#FACC15" />
       </View>
     );
   }
 
-  if (!user) {
-    return <Redirect href="/(auth)/login" />;
-  }
-
   const isWeb = Platform.OS === 'web';
+
+  const navItems = [
+    { label: t('catalog', 'Course Catalog'), path: '/(student)', icon: '📚' },
+    { label: t('blog', 'Blog & Insights'), path: '/(student)/blog', icon: '✍️' },
+    { label: t('myCertificates', 'My Certificates'), path: '/(student)/certificates', icon: '🎓', protected: true },
+    { label: t('profile', 'Profile & Account'), path: '/(student)/profile', icon: '👤', protected: true },
+  ];
+
+  const isCurrentActive = (targetPath: string) => {
+    if (targetPath === '/(student)') {
+      return pathname === '/' || pathname === '/(student)';
+    }
+    return pathname.includes(targetPath.replace('/(student)/', ''));
+  };
+
+  const handleNavClick = (item: { path: string; protected?: boolean }) => {
+    if (item.protected && !user) {
+      router.push('/(auth)/login');
+      return;
+    }
+    router.push(item.path as any);
+  };
 
   return (
     <View className="flex-1 flex-col md:flex-row bg-surface-dark">
-      {/* Desktop / Web Sidebar Header */}
+      {/* Desktop / Web Left Sidebar */}
       {isWeb && (
-        <View className="w-full md:w-64 bg-surface-card border-b md:border-b-0 md:border-r border-surface-border p-4 justify-between">
+        <View className="hidden md:flex w-72 bg-surface-card border-r border-surface-border p-5 justify-between">
           <View>
-            <Text className="text-xl font-bold text-white mb-6 tracking-wide">LEARNING APP</Text>
-            
-            <TouchableOpacity
-              onPress={() => router.push('/(student)')}
-              className={`p-3 rounded-xl mb-2 ${pathname === '/' || pathname === '/(student)' ? 'bg-brand-600' : 'bg-transparent'}`}
-            >
-              <Text className="text-white font-semibold">Course Catalog</Text>
+            <TouchableOpacity onPress={() => router.push('/(student)')} className="mb-6">
+              <AppLogo size={48} showText />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => router.push('/(student)/certificates' as any)}
-              className={`p-3 rounded-xl mb-2 ${pathname.includes('certificates') ? 'bg-brand-600' : 'bg-transparent'}`}
-            >
-              <Text className="text-white font-semibold">My Certificates</Text>
-            </TouchableOpacity>
+            {/* Language Switcher in Sidebar */}
+            <View className="mb-6 bg-surface-dark/60 p-2 rounded-2xl border border-surface-border/60">
+              <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1.5">
+                🌐 Language / زبان
+              </Text>
+              <LanguageSwitcher />
+            </View>
 
-            <TouchableOpacity
-              onPress={() => router.push('/(student)/profile' as any)}
-              className={`p-3 rounded-xl mb-2 ${pathname.includes('profile') ? 'bg-brand-600' : 'bg-transparent'}`}
-            >
-              <Text className="text-white font-semibold">Profile</Text>
-            </TouchableOpacity>
+            <View className="mb-2">
+              <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">
+                MAIN MENU
+              </Text>
+              {navItems.map((item) => {
+                const active = isCurrentActive(item.path);
+                return (
+                  <TouchableOpacity
+                    key={item.path}
+                    onPress={() => handleNavClick(item)}
+                    className={`flex-row items-center gap-3 p-3.5 rounded-2xl mb-2 border transition-all ${
+                      active
+                        ? 'bg-brand-600 border-gold-400/70 shadow-lg shadow-brand-900/50'
+                        : 'bg-transparent border-transparent hover:bg-surface-hover'
+                    }`}
+                  >
+                    <Text className="text-lg">{item.icon}</Text>
+                    <Text className={`font-semibold text-sm ${active ? 'text-white font-bold' : 'text-slate-300'}`}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
-          {isAdmin && (
-            <TouchableOpacity
-              onPress={() => router.push('/admin' as any)}
-              className="p-3 bg-amber-600/30 border border-amber-500/50 rounded-xl"
-            >
-              <Text className="text-amber-300 font-bold text-center">Admin Panel →</Text>
-            </TouchableOpacity>
-          )}
+          <View className="border-t border-surface-border/60 pt-4 gap-2">
+            {user ? (
+              <>
+                {isAdmin && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/admin' as any)}
+                    className="p-3 bg-gradient-to-r from-amber-600/30 to-gold-600/30 border border-gold-400/50 rounded-2xl mb-2 flex-row items-center justify-between"
+                  >
+                    <Text className="text-gold-300 font-bold text-sm">⚡ Admin Dashboard</Text>
+                    <Text className="text-gold-400 font-extrabold">→</Text>
+                  </TouchableOpacity>
+                )}
+                <View className="p-3 bg-surface-dark/60 rounded-xl border border-surface-border/40 flex-row items-center justify-between">
+                  <View className="flex-1 mr-2">
+                    <Text className="text-white font-bold text-xs truncate">{user.displayName || user.email}</Text>
+                    <Text className="text-gold-400 text-[10px] font-bold uppercase">{isAdmin ? 'Admin' : 'Student'}</Text>
+                  </View>
+                  <TouchableOpacity onPress={logout} className="p-1.5 bg-red-950/40 rounded-lg border border-red-800/40">
+                    <Text className="text-red-400 text-xs font-bold">Exit</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <View className="gap-2">
+                <TouchableOpacity
+                  onPress={() => router.push('/(auth)/login')}
+                  className="p-3.5 bg-brand-600 border border-gold-400/60 rounded-2xl items-center shadow-md"
+                >
+                  <Text className="text-white font-bold text-sm">{t('signIn', 'Sign In')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/(auth)/register')}
+                  className="p-3 bg-surface-dark border border-surface-border rounded-2xl items-center"
+                >
+                  <Text className="text-gold-300 font-bold text-xs">{t('signUp', 'Sign Up')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       )}
 
-      {/* Main Content Area */}
-      <View className="flex-1">
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: '#1E293B' },
-            headerTintColor: '#FFFFFF',
-            headerTitleStyle: { fontWeight: 'bold' },
-            contentStyle: { backgroundColor: '#0F172A' },
-          }}
-        >
-          <Stack.Screen name="index" options={{ title: 'Course Catalog' }} />
-          <Stack.Screen name="course/[courseId]" options={{ title: 'Course Details' }} />
-          <Stack.Screen name="lesson/[courseId]/[lessonId]" options={{ title: 'Lesson Player' }} />
-          <Stack.Screen name="exam/[courseId]" options={{ title: 'Final Exam' }} />
-          <Stack.Screen name="certificates" options={{ title: 'My Certificates' }} />
-          <Stack.Screen name="profile" options={{ title: 'Profile & Account' }} />
-        </Stack>
+      {/* Mobile Header Bar */}
+      <View className="flex-1 flex-col">
+        <View className="md:hidden flex-row items-center justify-between bg-surface-card border-b border-surface-border px-3 py-2.5">
+          <TouchableOpacity onPress={() => router.push('/(student)')}>
+            <AppLogo size={36} showText />
+          </TouchableOpacity>
+
+          <View className="flex-row items-center gap-2">
+            <LanguageSwitcher />
+            <TouchableOpacity
+              onPress={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-xl bg-surface-dark border border-surface-border"
+            >
+              <Text className="text-gold-400 font-bold text-base">{mobileMenuOpen ? '✕' : '☰'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Mobile Slide-out Menu Drawer */}
+        {mobileMenuOpen && (
+          <View className="md:hidden bg-surface-card border-b border-surface-border p-4 shadow-2xl z-50">
+            <View className="mb-4">
+              <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Navigation</Text>
+              {navItems.map((item) => {
+                const active = isCurrentActive(item.path);
+                return (
+                  <TouchableOpacity
+                    key={item.path}
+                    onPress={() => {
+                      setMobileMenuOpen(false);
+                      handleNavClick(item);
+                    }}
+                    className={`flex-row items-center gap-3 p-3 rounded-xl mb-1.5 border ${
+                      active ? 'bg-brand-600 border-gold-400' : 'bg-surface-dark/50 border-surface-border/40'
+                    }`}
+                  >
+                    <Text className="text-base">{item.icon}</Text>
+                    <Text className={`font-semibold text-sm ${active ? 'text-white font-bold' : 'text-slate-300'}`}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {user ? (
+              <>
+                {isAdmin && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setMobileMenuOpen(false);
+                      router.push('/admin' as any);
+                    }}
+                    className="p-3 bg-amber-600/30 border border-gold-400/50 rounded-xl mb-3"
+                  >
+                    <Text className="text-gold-300 font-bold text-center text-sm">⚡ Admin Panel →</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={logout}
+                  className="p-3 bg-red-950/60 border border-red-800 rounded-xl"
+                >
+                  <Text className="text-red-300 font-bold text-center text-xs">Sign Out</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View className="flex-row gap-2 mt-2">
+                <TouchableOpacity
+                  onPress={() => {
+                    setMobileMenuOpen(false);
+                    router.push('/(auth)/login');
+                  }}
+                  className="flex-1 p-3 bg-brand-600 border border-gold-400/60 rounded-xl items-center"
+                >
+                  <Text className="text-white font-bold text-xs">{t('signIn', 'Sign In')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setMobileMenuOpen(false);
+                    router.push('/(auth)/register');
+                  }}
+                  className="flex-1 p-3 bg-surface-dark border border-surface-border rounded-xl items-center"
+                >
+                  <Text className="text-gold-300 font-bold text-xs">{t('signUp', 'Sign Up')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Main Screen Content */}
+        <View className="flex-1" style={isWeb ? ({ flex: 1, overflowY: 'auto' } as any) : { flex: 1 }}>
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: '#091430' },
+              headerTintColor: '#FFFFFF',
+              headerTitleStyle: { fontWeight: 'bold' },
+              contentStyle: { backgroundColor: '#030819' },
+              headerRight: () => (
+                <View className="mr-3 flex-row items-center gap-3">
+                  <LanguageSwitcher />
+                  <AppLogo size={32} />
+                </View>
+              ),
+            }}
+          >
+            <Stack.Screen name="index" options={{ title: 'FARUKH.ORG' }} />
+            <Stack.Screen name="blog/index" options={{ title: 'Insights & Blog' }} />
+            <Stack.Screen name="blog/[blogId]" options={{ title: 'Article' }} />
+            <Stack.Screen name="course/[courseId]" options={{ title: 'Course Details' }} />
+            <Stack.Screen name="lesson/[courseId]/[lessonId]" options={{ title: 'Lesson Player' }} />
+            <Stack.Screen name="exam/[courseId]" options={{ title: 'Final Exam' }} />
+            <Stack.Screen name="certificates" options={{ title: 'My Certificates' }} />
+            <Stack.Screen name="profile" options={{ title: 'Profile & Account' }} />
+          </Stack>
+        </View>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <View className="md:hidden flex-row bg-surface-card border-t border-surface-border justify-around py-2 px-1">
+          {navItems.map((item) => {
+            const active = isCurrentActive(item.path);
+            return (
+              <TouchableOpacity
+                key={item.path}
+                onPress={() => handleNavClick(item)}
+                className="items-center py-1 px-3"
+              >
+                <Text className={`text-xl mb-0.5 ${active ? 'scale-110' : 'opacity-70'}`}>{item.icon}</Text>
+                <Text
+                  className={`text-[10px] font-semibold ${
+                    active ? 'text-gold-400 font-bold' : 'text-slate-400'
+                  }`}
+                >
+                  {item.label.split(' ')[0]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );

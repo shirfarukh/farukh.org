@@ -2,28 +2,23 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Learning Platform',
-  slug: 'learning-platform',
+  name: 'FARUKH.ORG',
+  slug: 'farukh-org',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
-  splash: {
-    image: './assets/splash.png',
-    resizeMode: 'contain',
-    backgroundColor: '#0F172A',
-  },
   assetBundlePatterns: ['**/*'],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.learningplatform.app',
+    bundleIdentifier: 'org.farukh.app',
   },
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#0F172A',
     },
-    package: 'com.learningplatform.app',
+    package: 'org.farukh.app',
   },
   web: {
     favicon: './assets/favicon.png',
@@ -31,6 +26,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash.png',
+        resizeMode: 'contain',
+        backgroundColor: '#0F172A',
+      },
+    ],
   ],
   scheme: 'learningapp',
   extra: {

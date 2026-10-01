@@ -35,12 +35,24 @@ export default function AdminDashboardScreen() {
         {/* Quick Navigation Cards */}
         <Text className="text-lg font-semibold text-white mb-3">Management</Text>
 
-        <Card onPress={() => router.push('/admin/courses')}>
+        <Card onPress={() => router.push('/admin/courses')} className="mb-4">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-white text-lg font-bold">Course & Content Management</Text>
               <Text className="text-slate-400 text-sm mt-0.5">
                 Create, edit modules, lessons, YouTube links, and question banks
+              </Text>
+            </View>
+            <Text className="text-brand-400 text-xl font-bold">→</Text>
+          </View>
+        </Card>
+
+        <Card onPress={() => router.push('/admin/students')}>
+          <View className="flex-row justify-between items-center">
+            <View>
+              <Text className="text-white text-lg font-bold">Student Roster & Progress</Text>
+              <Text className="text-slate-400 text-sm mt-0.5">
+                Manage student accounts, disable access, and reset course progress
               </Text>
             </View>
             <Text className="text-brand-400 text-xl font-bold">→</Text>

@@ -18,6 +18,13 @@ export const CourseSchema = z.object({
   passPercentage: z.number().min(1).max(100).default(80),
   exam: ExamSettingsSchema,
   lessonCount: z.number().default(0),
+  faTitle: z.string().optional(),
+  faDescription: z.string().optional(),
+  sampleLessons: z.array(z.object({
+    title: z.string(),
+    duration: z.string(),
+    description: z.string(),
+  })).optional(),
   createdAt: z.any().optional(),
   updatedAt: z.any().optional(),
 });

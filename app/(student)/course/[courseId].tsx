@@ -116,10 +116,11 @@ export default function StudentCourseDetailScreen() {
                 const isCompleted = lessonProg?.completed || false;
 
                 // Sequential Unlock Logic:
-                // Lesson 0 is unlocked. Lesson N is unlocked if Lesson N-1 is completed.
-                let isUnlocked = index === 0;
-                if (index > 0) {
-                  const prevLesson = moduleLessons[index - 1];
+                // Global Lesson 0 is unlocked. Lesson N is unlocked if Lesson N-1 in publishedLessons is completed.
+                const globalIndex = publishedLessons.findIndex((l) => l.id === les.id);
+                let isUnlocked = globalIndex === 0;
+                if (globalIndex > 0) {
+                  const prevLesson = publishedLessons[globalIndex - 1];
                   isUnlocked = progress[prevLesson.id!]?.completed || false;
                 }
 

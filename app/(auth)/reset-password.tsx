@@ -5,6 +5,7 @@ import { ScreenWrapper } from '../../src/components/ui/ScreenWrapper';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { useAuth } from '../../src/features/auth/useAuth';
+import { AppLogo } from '../../src/components/ui/AppLogo';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -35,9 +36,10 @@ export default function ResetPasswordScreen() {
   return (
     <ScreenWrapper>
       <View className="flex-1 justify-center max-w-md w-full self-center py-8">
-        <View className="mb-8">
+        <View className="mb-8 items-center text-center">
+          <AppLogo size={96} showText className="mb-6 flex-col justify-center items-center text-center" />
           <Text className="text-3xl font-bold text-white mb-2">Reset Password</Text>
-          <Text className="text-slate-400 text-base">Enter your email to receive password reset instructions</Text>
+          <Text className="text-slate-400 text-base text-center">Enter your email to receive password reset instructions</Text>
         </View>
 
         {message ? (

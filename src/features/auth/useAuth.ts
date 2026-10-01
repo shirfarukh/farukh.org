@@ -18,7 +18,7 @@ export function useAuth() {
     const unsubscribe = onIdTokenChanged(auth, async (currentUser) => {
       if (currentUser) {
         try {
-          const idTokenResult = await currentUser.getIdTokenResult(true);
+          const idTokenResult = await currentUser.getIdTokenResult(false);
           const hasAdminClaim = !!idTokenResult.claims.admin;
           setUser(currentUser, hasAdminClaim);
         } catch {

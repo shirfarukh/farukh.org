@@ -6,7 +6,7 @@ if (process.env.FIRESTORE_EMULATOR_HOST === undefined) {
   process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 }
 
-if (!admin.apps.length) {
+if (!admin.apps?.length) {
   admin.initializeApp({ projectId: 'demo-learning-app' });
 }
 
@@ -14,7 +14,7 @@ async function makeAdmin(email: string) {
   try {
     const user = await admin.auth().getUserByEmail(email);
     await admin.auth().setCustomUserClaims(user.uid, { admin: true });
-    
+
     await admin.firestore().collection('users').doc(user.uid).set({
       role: 'admin',
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),

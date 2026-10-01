@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, FlatList, ActivityIndicator, Linking } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 import { ScreenWrapper } from '../../src/components/ui/ScreenWrapper';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
@@ -11,6 +13,7 @@ import { formatDate } from '../../src/lib/utils';
 
 export default function MyCertificatesScreen() {
   const { user } = useAuth();
+  const router = useRouter();
 
   const { data: certificates = [], isLoading } = useQuery({
     queryKey: ['userCertificates', user?.uid],
@@ -46,7 +49,8 @@ export default function MyCertificatesScreen() {
             data={certificates}
             keyExtractor={(item) => item.id!}
             renderItem={({ item }) => {
-              const storageUrl = `https://firebasestorage.googleapis.com/v0/b/demo-learning-app.appspot.com/o/${encodeURIComponent(item.pdfPath)}?alt=media`;
+              const storageBucket = Constants.expoConfig?.extra?.firebaseStorageBucket || 'demo-learning-app.appspot.com';
+              const storageUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(item.pdfPath)}?alt=media`;
 
               return (
                 <Card className="mb-4 border-brand-500">
@@ -72,7 +76,7 @@ export default function MyCertificatesScreen() {
                     <Button
                       title="Public Verification"
                       variant="outline"
-                      onPress={() => Linking.openURL(`http://localhost:5002/verify/${item.id}`)}
+                      onPress={() => router.push(`/verify/${item.id}` as any)}
                     />
                   </View>
                 </Card>

@@ -5,6 +5,30 @@ export interface BulkQuestionInput {
   explanation: string;
 }
 
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
 export function parseBulkQuestions(rawContent: string, format: 'json' | 'csv'): BulkQuestionInput[] {
   if (format === 'json') {
     const parsed = JSON.parse(rawContent);
@@ -17,7 +41,7 @@ export function parseBulkQuestions(rawContent: string, format: 'json' | 'csv'): 
     }));
   }
 
-  // Simple CSV parser: text,opt1,opt2,opt3,opt4,correctIndex(1-4),explanation
+  // Quote-aware CSV parser: text,opt1,opt2,opt3,opt4,correctIndex(1-4),explanation
   const lines = rawContent.split(/\r?\n/).filter(line => line.trim().length > 0);
   const questions: BulkQuestionInput[] = [];
 
@@ -25,7 +49,7 @@ export function parseBulkQuestions(rawContent: string, format: 'json' | 'csv'): 
     // Skip header line if detected
     if (idx === 0 && line.toLowerCase().includes('question')) return;
 
-    const parts = line.split(',').map(p => p.trim());
+    const parts = parseCsvLine(line);
     if (parts.length >= 6) {
       const [text, opt1, opt2, opt3, opt4, correctIdxStr, explanation] = parts;
       const correctIndex = parseInt(correctIdxStr, 10) || 1;

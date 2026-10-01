@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, SafeAreaView, ScrollView } from 'react-native';
+import { View, SafeAreaView, ScrollView, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 interface ScreenWrapperProps {
@@ -13,19 +13,29 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
   scrollable = true,
   className = '',
 }) => {
+  const isWeb = Platform.OS === 'web';
+
   return (
-    <SafeAreaView className="flex-1 bg-surface-dark">
+    <SafeAreaView
+      className="flex-1 bg-surface-dark"
+      style={isWeb ? ({ flex: 1, overflowY: 'auto' } as any) : { flex: 1 }}
+    >
       <StatusBar style="light" />
       {scrollable ? (
         <ScrollView
           className={`flex-1 px-4 py-4 ${className}`}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         >
           {children}
         </ScrollView>
       ) : (
-        <View className={`flex-1 px-4 py-4 ${className}`}>{children}</View>
+        <View
+          className={`flex-1 px-4 py-4 ${className}`}
+          style={isWeb ? ({ flex: 1, overflowY: 'auto' } as any) : { flex: 1 }}
+        >
+          {children}
+        </View>
       )}
     </SafeAreaView>
   );

@@ -2,12 +2,14 @@ import React from 'react';
 import { View, Text, ActivityIndicator, Linking } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 import { ScreenWrapper } from '../../src/components/ui/ScreenWrapper';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
 import { Badge } from '../../src/components/ui/Badge';
 import { verifyCertificateCallable } from '../../src/features/certificates/certificatesApi';
 import { formatDate } from '../../src/lib/utils';
+import { AppLogo } from '../../src/components/ui/AppLogo';
 
 export default function VerifyCertificateScreen() {
   const { certificateId } = useLocalSearchParams<{ certificateId: string }>();
@@ -41,16 +43,20 @@ export default function VerifyCertificateScreen() {
     );
   }
 
-  const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/demo-learning-app.appspot.com/o/${encodeURIComponent(cert.pdfPath)}?alt=media`;
+  const storageBucket = Constants.expoConfig?.extra?.firebaseStorageBucket || 'demo-learning-app.appspot.com';
+  const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(cert.pdfPath)}?alt=media`;
 
   return (
     <ScreenWrapper>
       <View className="max-w-2xl w-full self-center my-8">
         <Card className="border-brand-500 p-8">
           <View className="flex-row justify-between items-center mb-6 border-b border-surface-border pb-4">
-            <View>
-              <Text className="text-xs font-bold text-brand-400 tracking-wider uppercase mb-1">Official Verification</Text>
-              <Text className="text-2xl font-bold text-white">Certificate of Achievement</Text>
+            <View className="flex-row items-center gap-4">
+              <AppLogo size={56} />
+              <View>
+                <Text className="text-xs font-bold text-brand-400 tracking-wider uppercase mb-1">FARUKH.ORG Official Verification</Text>
+                <Text className="text-2xl font-bold text-white">Certificate of Achievement</Text>
+              </View>
             </View>
             <Badge
               label={cert.revoked ? 'REVOKED' : 'OFFICIALLY VERIFIED'}

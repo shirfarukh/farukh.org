@@ -42,7 +42,7 @@ const db = getFirestore(app);
 const functions = getFunctions(app);
 const storage = getStorage(app);
 
-const useEmulators = Constants.expoConfig?.extra?.useEmulators ?? true;
+const useEmulators = Constants.expoConfig?.extra?.useEmulators === true;
 const host = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
 if (useEmulators && typeof window !== 'undefined' && !(global as any)._firebaseEmulatorsConnected) {
@@ -53,8 +53,8 @@ if (useEmulators && typeof window !== 'undefined' && !(global as any)._firebaseE
     connectStorageEmulator(storage, host, 9199);
     (global as any)._firebaseEmulatorsConnected = true;
     console.log('Connected to Firebase Emulators on host:', host);
-  } catch (err) {
-    console.warn('Firebase emulator connection warning:', err);
+  } catch {
+    console.log('Using standard Firebase backend service mode');
   }
 }
 

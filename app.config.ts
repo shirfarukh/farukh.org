@@ -43,6 +43,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'demo-learning-app.appspot.com',
     firebaseMessagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '123456789',
     firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:123456789:web:abcdef',
-    useEmulators: process.env.EXPO_PUBLIC_USE_EMULATORS !== 'false',
+    useEmulators: process.env.EXPO_PUBLIC_USE_EMULATORS === 'true',
   },
 });

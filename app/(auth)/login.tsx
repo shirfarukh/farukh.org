@@ -29,7 +29,12 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace('/(student)');
+      const isKnownAdmin = ['shir@secureai.be', 'admin@example.com', 'admin@farukh.org'].includes(email.trim().toLowerCase());
+      if (isKnownAdmin) {
+        router.replace('/admin');
+      } else {
+        router.replace('/(student)');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to log in');
     } finally {

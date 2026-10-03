@@ -20,7 +20,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
             : 'bg-transparent'
         }`}
       >
-        <Text className="text-xs">🇬🇧</Text>
+        <Text className="text-xs">🇺🇸</Text>
         <Text
           className={`text-xs font-bold ${
             currentLang.startsWith('en') ? 'text-white' : 'text-slate-300'
@@ -38,7 +38,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
             : 'bg-transparent'
         }`}
       >
-        <Text className="text-xs">🇮🇷</Text>
+        <Text className="text-xs">🇦🇫</Text>
         <Text
           className={`text-xs font-bold ${
             currentLang.startsWith('fa') ? 'text-gold-300' : 'text-slate-300'

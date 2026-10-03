@@ -38,9 +38,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'learningapp',
   extra: {
     firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'demo-api-key',
-    firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'demo-project.firebaseapp.com',
-    firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'demo-learning-app',
-    firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'demo-learning-app.appspot.com',
+    firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'farukh-org.firebaseapp.com',
+    firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'farukh-org',
+    firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'farukh-org.appspot.com',
     firebaseMessagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '123456789',
     firebaseAppId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:123456789:web:abcdef',
     useEmulators: process.env.EXPO_PUBLIC_USE_EMULATORS === 'true',

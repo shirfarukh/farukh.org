@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
 
 // Connect to emulator or real project
 if (process.env.FIRESTORE_EMULATOR_HOST === undefined) {
@@ -6,18 +6,20 @@ if (process.env.FIRESTORE_EMULATOR_HOST === undefined) {
   process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 }
 
-if (!admin.apps?.length) {
-  admin.initializeApp({ projectId: 'demo-learning-app' });
+const firebaseAdmin = (admin as any).default || admin;
+
+if (!firebaseAdmin.apps?.length) {
+  firebaseAdmin.initializeApp({ projectId: 'demo-learning-app' });
 }
 
 async function makeAdmin(email: string) {
   try {
-    const user = await admin.auth().getUserByEmail(email);
-    await admin.auth().setCustomUserClaims(user.uid, { admin: true });
+    const user = await firebaseAdmin.auth().getUserByEmail(email);
+    await firebaseAdmin.auth().setCustomUserClaims(user.uid, { admin: true });
 
-    await admin.firestore().collection('users').doc(user.uid).set({
+    await firebaseAdmin.firestore().collection('users').doc(user.uid).set({
       role: 'admin',
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
 
     console.log(`Successfully granted admin privileges to ${email} (UID: ${user.uid})`);

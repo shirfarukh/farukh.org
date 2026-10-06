@@ -1,16 +1,17 @@
-import { initializeApp, getApps, getApp } from '@firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getAuth,
   initializeAuth,
+  getAuth,
+  // @ts-expect-error - getReactNativePersistence exists in React Native bundle of firebase/auth
+  getReactNativePersistence,
   connectAuthEmulator,
-  Auth
-} from '@firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from '@firebase/firestore';
-import { getFunctions, connectFunctionsEmulator } from '@firebase/functions';
-import { getStorage, connectStorageEmulator } from '@firebase/storage';
-import { getDatabase, connectDatabaseEmulator } from '@firebase/database';
-import { getAnalytics, isSupported, Analytics } from '@firebase/analytics';
-import * as FirebaseAuth from '@firebase/auth';
+  Auth,
+} from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
+import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
@@ -26,23 +27,20 @@ const firebaseConfig = {
   measurementId: Constants.expoConfig?.extra?.firebaseMeasurementId || 'G-QB1YECVRVD',
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-let auth: Auth;
-if (Platform.OS === 'web') {
-  try {
+let auth: ReturnType<typeof getAuth>;
+try {
+  auth = Platform.OS === 'web'
+    ? getAuth(app)
+    : initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
+} catch (e: any) {
+  if (e?.code === 'auth/already-initialized') {
     auth = getAuth(app);
-  } catch {
-    auth = initializeAuth(app);
-  }
-} else {
-  try {
-    const getReactNativePersistence = (FirebaseAuth as any).getReactNativePersistence;
-    auth = initializeAuth(app, {
-      persistence: getReactNativePersistence ? getReactNativePersistence(AsyncStorage) : undefined,
-    });
-  } catch {
-    auth = getAuth(app);
+  } else {
+    throw e; // surface the real error instead of masking it
   }
 }
 

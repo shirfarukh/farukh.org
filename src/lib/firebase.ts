@@ -10,6 +10,8 @@ import { getFunctions, connectFunctionsEmulator } from '@firebase/functions';
 import { getStorage, connectStorageEmulator } from '@firebase/storage';
 import { getDatabase, connectDatabaseEmulator } from '@firebase/database';
 import { getAnalytics, isSupported, Analytics } from '@firebase/analytics';
+import * as FirebaseAuth from '@firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
@@ -27,10 +29,21 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 let auth: Auth;
-try {
-  auth = getAuth(app);
-} catch {
-  auth = initializeAuth(app);
+if (Platform.OS === 'web') {
+  try {
+    auth = getAuth(app);
+  } catch {
+    auth = initializeAuth(app);
+  }
+} else {
+  try {
+    const getReactNativePersistence = (FirebaseAuth as any).getReactNativePersistence;
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence ? getReactNativePersistence(AsyncStorage) : undefined,
+    });
+  } catch {
+    auth = getAuth(app);
+  }
 }
 
 

@@ -7,7 +7,7 @@ import {
   query,
   orderBy,
   serverTimestamp,
-} from 'firebase/firestore';
+} from '@firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Course, Module } from '../../types/course';
 import { Lesson } from '../../types/lesson';
@@ -29,6 +29,10 @@ export async function createOrUpdateCourse(courseData: Partial<Course>, courseId
   };
   await setDoc(ref, payload, { merge: true });
   return ref.id;
+}
+
+export async function deleteCourse(courseId: string): Promise<void> {
+  await deleteDoc(doc(db, 'courses', courseId));
 }
 
 // Modules & Lessons

@@ -10,7 +10,9 @@ export default function StudentLayout() {
   const { user, isAdmin, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isPersian = i18n.language?.startsWith('fa');
+  const username = user?.email ? user.email.split('@')[0] : (user?.displayName || 'Student');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (loading) {
@@ -101,13 +103,32 @@ export default function StudentLayout() {
                     <Text className="text-gold-400 font-extrabold">→</Text>
                   </TouchableOpacity>
                 )}
-                <View className="p-3 bg-surface-dark/60 rounded-xl border border-surface-border/40 flex-row items-center justify-between">
-                  <View className="flex-1 mr-2">
-                    <Text className="text-white font-bold text-xs truncate">{user.displayName || user.email}</Text>
-                    <Text className="text-gold-400 text-[10px] font-bold uppercase">{isAdmin ? 'Admin' : 'Student'}</Text>
+                <View className="p-3.5 bg-surface-dark/80 rounded-2xl border border-surface-border/60 gap-2.5">
+                  <View className="flex-row items-center gap-2.5">
+                    <View className="w-9 h-9 rounded-full bg-brand-600 border border-gold-400/60 items-center justify-center">
+                      <Text className="text-white font-black text-sm">
+                        {username.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-slate-400 text-[10px] font-semibold">
+                        {isPersian ? 'خوش آمدید' : 'Welcome,'}
+                      </Text>
+                      <Text className="text-white font-extrabold text-sm truncate">
+                        {username}
+                      </Text>
+                      <Text className="text-gold-400 text-[10px] font-bold uppercase">
+                        {isAdmin ? 'Admin' : 'Student'}
+                      </Text>
+                    </View>
                   </View>
-                  <TouchableOpacity onPress={logout} className="p-1.5 bg-red-950/40 rounded-lg border border-red-800/40">
-                    <Text className="text-red-400 text-xs font-bold">Exit</Text>
+                  <TouchableOpacity
+                    onPress={logout}
+                    className="p-2 bg-red-950/60 hover:bg-red-900/60 rounded-xl border border-red-800/60 items-center flex-row justify-center gap-1.5"
+                  >
+                    <Text className="text-red-300 text-xs font-bold">
+                      🚪 {isPersian ? 'خروج از حساب' : 'Log Out'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -139,6 +160,31 @@ export default function StudentLayout() {
           </TouchableOpacity>
 
           <View className="flex-row items-center gap-2">
+            {user ? (
+              <View className="flex-row items-center gap-1.5">
+                <View className="bg-brand-950/80 border border-brand-500/40 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+                  <View className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <Text className="text-brand-300 text-[11px] font-bold max-w-[100px] truncate">
+                    {username}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={logout}
+                  className="bg-red-950/70 border border-red-700/60 px-2 py-1 rounded-lg"
+                >
+                  <Text className="text-red-300 text-[10px] font-bold">
+                    {isPersian ? 'خروج' : 'Log Out'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => router.push('/(auth)/login')}
+                className="bg-brand-600 border border-gold-400/40 px-2.5 py-1 rounded-lg"
+              >
+                <Text className="text-white text-xs font-bold">{t('signIn', 'Sign In')}</Text>
+              </TouchableOpacity>
+            )}
             <LanguageSwitcher />
             <TouchableOpacity
               onPress={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -178,22 +224,40 @@ export default function StudentLayout() {
 
             {user ? (
               <>
+                <View className="p-3 bg-surface-dark/90 border border-surface-border/60 rounded-xl mb-3 flex-row items-center gap-2.5">
+                  <View className="w-8 h-8 rounded-full bg-brand-600 items-center justify-center">
+                    <Text className="text-white font-black text-xs">{username.charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-slate-400 text-[10px]">
+                      {isPersian ? 'خوش آمدید' : 'Welcome,'}
+                    </Text>
+                    <Text className="text-white font-bold text-xs truncate">{username}</Text>
+                  </View>
+                  <Text className="text-gold-400 text-[10px] font-bold uppercase">{isAdmin ? 'Admin' : 'Student'}</Text>
+                </View>
+
                 {isAdmin && (
                   <TouchableOpacity
                     onPress={() => {
                       setMobileMenuOpen(false);
                       router.push('/admin' as any);
                     }}
-                    className="p-3 bg-amber-600/30 border border-gold-400/50 rounded-xl mb-3"
+                    className="p-3 bg-amber-600/30 border border-gold-400/50 rounded-xl mb-2"
                   >
                     <Text className="text-gold-300 font-bold text-center text-sm">⚡ Admin Panel →</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
-                  onPress={logout}
-                  className="p-3 bg-red-950/60 border border-red-800 rounded-xl"
+                  onPress={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="p-3 bg-red-950/70 border border-red-800 rounded-xl flex-row items-center justify-center gap-1.5"
                 >
-                  <Text className="text-red-300 font-bold text-center text-xs">Sign Out</Text>
+                  <Text className="text-red-300 font-bold text-center text-xs">
+                    🚪 {isPersian ? 'خروج از حساب' : 'Log Out'}
+                  </Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -230,7 +294,40 @@ export default function StudentLayout() {
               headerTitleStyle: { fontWeight: 'bold' },
               contentStyle: { backgroundColor: '#030819' },
               headerRight: () => (
-                <View className="mr-3 flex-row items-center gap-3">
+                <View className="mr-3 flex-row items-center gap-2.5">
+                  {user ? (
+                    <View className="flex-row items-center gap-2">
+                      <View className="bg-brand-900/60 border border-brand-500/40 px-3 py-1 rounded-full flex-row items-center gap-1.5">
+                        <View className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <Text className="text-brand-200 text-xs font-bold">
+                          {isPersian ? `خوش آمدید، ${username}` : `Welcome, ${username}`}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={logout}
+                        className="bg-red-950/60 border border-red-700/60 px-2.5 py-1 rounded-xl"
+                      >
+                        <Text className="text-red-300 font-bold text-xs">
+                          {isPersian ? 'خروج' : 'Log Out'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View className="flex-row items-center gap-1.5">
+                      <TouchableOpacity
+                        onPress={() => router.push('/(auth)/login')}
+                        className="bg-brand-600 border border-gold-400/50 px-3 py-1 rounded-xl shadow-sm"
+                      >
+                        <Text className="text-white font-bold text-xs">{t('signIn', 'Sign In')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => router.push('/(auth)/register')}
+                        className="bg-surface-dark border border-surface-border px-2.5 py-1 rounded-xl"
+                      >
+                        <Text className="text-gold-300 font-bold text-xs">{t('signUp', 'Sign Up')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                   <LanguageSwitcher />
                   <AppLogo size={32} />
                 </View>

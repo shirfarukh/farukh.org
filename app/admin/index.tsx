@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,8 @@ import { Input } from '../../src/components/ui/Input';
 import { Badge } from '../../src/components/ui/Badge';
 import { AppLogo } from '../../src/components/ui/AppLogo';
 import { LanguageSwitcher } from '../../src/components/ui/LanguageSwitcher';
-import { getAdminCourses, createOrUpdateCourse } from '../../src/features/admin/adminApi';
+import { getAdminCourses, createOrUpdateCourse, deleteCourse } from '../../src/features/admin/adminApi';
+import { extractYouTubeId } from '../../src/lib/utils';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
@@ -20,9 +21,19 @@ export default function AdminDashboardScreen() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [faTitle, setFaTitle] = useState('');
-  const [faDescription, setFaDescription] = useState('');
+  const [description, setDescription] = useState('');
+  const [body, setBody] = useState('');
+  const [keywordsInput, setKeywordsInput] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [formError, setFormError] = useState('');
+  const [createdSuccessId, setCreatedSuccessId] = useState<string | null>(null);
+
+  const detectedYouTubeId = extractYouTubeId(youtubeUrl);
+  const keywordsList = keywordsInput
+    .split(/[,،]+/)
+    .map((k) => k.trim())
+    .filter((k) => k.length > 0);
 
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ['adminCourses'],
@@ -31,26 +42,48 @@ export default function AdminDashboardScreen() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      await createOrUpdateCourse({
-        title,
+      setFormError('');
+      if (!title.trim()) {
+        throw new Error(isPersian ? 'لطفاً عنوان دوره را وارد کنید.' : 'Please enter a course title.');
+      }
+
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '') || `course-${Date.now()}`;
+
+      const videoId = detectedYouTubeId || (youtubeUrl.trim().length === 11 ? youtubeUrl.trim() : undefined);
+
+      const newId = await createOrUpdateCourse({
+        title: title.trim(),
+        faTitle: faTitle.trim() || undefined,
         slug,
-        description,
-        faTitle: faTitle || title,
-        faDescription: faDescription || description,
+        description: description.trim() || (body.trim() ? body.trim().slice(0, 160) + '...' : title.trim()),
+        body: body.trim() || undefined,
+        keywords: keywordsList,
+        youtubeUrl: youtubeUrl.trim() || undefined,
+        youtubeVideoId: videoId,
         status: 'published',
         passPercentage: 80,
         exam: { questionCount: 10, timeLimitMin: 30, maxAttempts: 3, cooldownHours: 24 },
         order: courses.length + 1,
       });
+
+      return newId;
     },
-    onSuccess: () => {
+    onSuccess: (newId) => {
       queryClient.invalidateQueries({ queryKey: ['adminCourses'] });
-      setShowCreate(false);
+      setCreatedSuccessId(newId);
       setTitle('');
-      setDescription('');
       setFaTitle('');
-      setFaDescription('');
+      setDescription('');
+      setBody('');
+      setKeywordsInput('');
+      setYoutubeUrl('');
+      setFormError('');
+    },
+    onError: (err: any) => {
+      setFormError(err.message || 'Failed to create course');
     },
   });
 
@@ -87,71 +120,188 @@ export default function AdminDashboardScreen() {
 
         {/* Quick Actions & Add Course Banner */}
         <View className="flex-row justify-between items-center mb-6">
-          <View>
+          <View className="flex-1 mr-3">
             <Text className="text-xl font-bold text-white">
               {isPersian ? 'دوره‌های موجود' : 'Active Courses'}
             </Text>
             <Text className="text-xs text-slate-400">
-              {isPersian ? 'جهت ویرایش روی هر دوره کلیک کنید' : 'Click any course to edit lessons, modules, and exam questions'}
+              {isPersian ? 'دوره‌ها را مدیریت کنید یا دوره جدید ایجاد نمایید' : 'Manage existing courses or create a new course for students'}
             </Text>
           </View>
 
           <Button
-            title={showCreate ? (isPersian ? 'انصراف' : 'Cancel') : (isPersian ? '+ افزودن دوره جدید' : '+ Add New Course')}
+            title={showCreate ? (isPersian ? 'بستن فرم' : 'Close Form') : (isPersian ? '+ ایجاد دوره جدید' : '+ Add Course')}
             variant={showCreate ? 'secondary' : 'primary'}
-            onPress={() => setShowCreate(!showCreate)}
+            onPress={() => {
+              setShowCreate(!showCreate);
+              if (createdSuccessId) setCreatedSuccessId(null);
+            }}
             className="shadow-lg shadow-brand-900"
           />
         </View>
 
+        {/* Creation Success Banner */}
+        {createdSuccessId && (
+          <Card className="mb-6 border-emerald-500/80 bg-emerald-950/30 p-5">
+            <View className="flex-row items-center justify-between mb-3">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-2xl">🎉</Text>
+                <View>
+                  <Text className="text-emerald-400 font-extrabold text-base">
+                    {isPersian ? 'دوره با موفقیت در پایگاه داده ایجاد شد!' : 'Course successfully created in database!'}
+                  </Text>
+                  <Text className="text-slate-300 text-xs mt-0.5">
+                    {isPersian ? 'اکنون می‌توانید سرفصل‌ها، ویدیوهای هر درس و سوالات آزمون را تنظیم کنید.' : 'You can now add modules, lessons, and exam pool questions.'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setCreatedSuccessId(null)}>
+                <Text className="text-slate-400 font-bold text-sm">✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View className="flex-row gap-3 mt-1">
+              <Button
+                title={isPersian ? 'تنظیم سرفصل‌ها و درس‌ها →' : 'Edit Curriculum & Lessons →'}
+                onPress={() => router.push(`/admin/courses/${createdSuccessId}` as any)}
+                variant="primary"
+                className="flex-1"
+              />
+              <Button
+                title={isPersian ? 'ایجاد یک دوره دیگر' : 'Add Another Course'}
+                onPress={() => {
+                  setCreatedSuccessId(null);
+                  setShowCreate(true);
+                }}
+                variant="secondary"
+              />
+            </View>
+          </Card>
+        )}
+
         {/* Add Course Form Card */}
         {showCreate && (
-          <Card className="mb-6 border-gold-400 bg-surface-card p-6">
+          <Card className="mb-6 border-gold-400 bg-surface-card p-6 shadow-2xl">
             <View className="flex-row items-center justify-between mb-4 border-b border-surface-border pb-3">
-              <Text className="text-lg font-extrabold text-white">
-                ✨ {isPersian ? 'ایجاد دوره جدید' : 'Create New Course'}
-              </Text>
-              <Badge label="PUBLISHED" variant="success" />
+              <View>
+                <Text className="text-lg font-extrabold text-white">
+                  ✨ {isPersian ? 'ایجاد دوره جدید' : 'Create New Course'}
+                </Text>
+                <Text className="text-slate-400 text-xs">
+                  {isPersian ? 'اطلاعات، متن، کلیدواژه‌ها و لینک یوتیوب دوره را وارد نمایید' : 'Enter course title, body content, keywords, and optional YouTube link'}
+                </Text>
+              </View>
+              <Badge label="STATUS: PUBLISHED" variant="success" />
             </View>
 
-            <Input
-              label={isPersian ? 'عنوان انگلیسی دوره' : 'Course Title (English)'}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="e.g. Executive Entrepreneurship & Growth Strategy"
-            />
+            {formError ? (
+              <View className="mb-4 p-3 bg-red-950/60 border border-red-700/60 rounded-xl">
+                <Text className="text-red-300 text-xs font-semibold">{formError}</Text>
+              </View>
+            ) : null}
 
-            <Input
-              label={isPersian ? 'عنوان فارسی دوره' : 'Course Title (Persian)'}
-              value={faTitle}
-              onChangeText={setFaTitle}
-              placeholder="مثال: آموزش جامع توسعه کسب‌وکار و کارآفرینی"
-            />
+            {/* Title Inputs */}
+            <View className="mb-1">
+              <Input
+                label={isPersian ? 'عنوان دوره (انگلیسی) *' : 'Course Title *'}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="e.g. Artificial Intelligence & Prompt Engineering"
+              />
+            </View>
 
-            <Input
-              label={isPersian ? 'توضیحات انگلیسی دوره' : 'Description (English)'}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Detailed course description..."
-              multiline
-              numberOfLines={2}
-            />
+            <View className="mb-1">
+              <Input
+                label={isPersian ? 'عنوان دوره (فارسی)' : 'Course Title (Persian / Alternative)'}
+                value={faTitle}
+                onChangeText={setFaTitle}
+                placeholder="مثال: هوش مصنوعی و مهندسی پرامپت"
+              />
+            </View>
 
-            <Input
-              label={isPersian ? 'توضیحات فارسی دوره' : 'Description (Persian)'}
-              value={faDescription}
-              onChangeText={setFaDescription}
-              placeholder="توضیحات جامع درباره سرفصل‌ها و هدف دوره..."
-              multiline
-              numberOfLines={2}
-            />
+            {/* Description / Summary */}
+            <View className="mb-1">
+              <Input
+                label={isPersian ? 'خلاصه دوره' : 'Short Description / Summary'}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="A concise 1-2 sentence overview of the course..."
+                multiline
+                numberOfLines={2}
+              />
+            </View>
 
-            <Button
-              title={isPersian ? 'ذخیره و انتشار دوره' : 'Save & Publish Course'}
-              onPress={() => createMutation.mutate()}
-              loading={createMutation.isPending}
-              className="mt-2"
-            />
+            {/* Course Body */}
+            <View className="mb-1">
+              <Input
+                label={isPersian ? 'متن و سرفصل‌های اصلی دوره (Body)' : 'Course Body & Detailed Syllabus'}
+                value={body}
+                onChangeText={setBody}
+                placeholder="Detailed curriculum overview, prerequisites, target audience, and key concepts covered..."
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+
+            {/* Keywords */}
+            <View className="mb-2">
+              <Input
+                label={isPersian ? 'کلیدواژه‌های دوره (با کاما جدا کنید)' : 'Course Keywords / Tags (comma-separated)'}
+                value={keywordsInput}
+                onChangeText={setKeywordsInput}
+                placeholder="e.g. AI, Deep Learning, Python, Automation"
+              />
+              {keywordsList.length > 0 && (
+                <View className="flex-row flex-wrap gap-1.5 mt-1.5 mb-2">
+                  {keywordsList.map((kw, idx) => (
+                    <View key={idx} className="bg-brand-900/60 border border-brand-500/40 px-2.5 py-1 rounded-full">
+                      <Text className="text-brand-300 text-[11px] font-semibold">#{kw}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* YouTube Link */}
+            <View className="mb-4">
+              <Input
+                label={isPersian ? 'لینک یا شناسه ویدیوی یوتیوب (اختیاری)' : 'YouTube Video Link (Optional)'}
+                value={youtubeUrl}
+                onChangeText={setYoutubeUrl}
+                placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+              />
+              {detectedYouTubeId ? (
+                <View className="mt-2 p-3 bg-surface-dark/90 rounded-xl border border-emerald-500/50 flex-row items-center gap-3">
+                  <Image
+                    source={{ uri: `https://img.youtube.com/vi/${detectedYouTubeId}/mqdefault.jpg` }}
+                    style={{ width: 80, height: 48, borderRadius: 8 }}
+                  />
+                  <View className="flex-1">
+                    <View className="flex-row items-center gap-1.5">
+                      <Text className="text-emerald-400 font-bold text-xs">✓ Valid YouTube Video</Text>
+                    </View>
+                    <Text className="text-slate-400 text-[11px]">ID: {detectedYouTubeId}</Text>
+                  </View>
+                </View>
+              ) : youtubeUrl.trim().length > 0 ? (
+                <Text className="text-amber-400 text-[11px] mt-1">
+                  ⚠️ Enter a full YouTube URL or valid 11-character video ID
+                </Text>
+              ) : null}
+            </View>
+
+            <View className="flex-row gap-3">
+              <Button
+                title={isPersian ? 'ذخیره و انتشار دوره در پایگاه داده' : 'Save Course to Firebase'}
+                onPress={() => createMutation.mutate()}
+                loading={createMutation.isPending}
+                className="flex-1"
+              />
+              <Button
+                title={isPersian ? 'انصراف' : 'Cancel'}
+                variant="outline"
+                onPress={() => setShowCreate(false)}
+              />
+            </View>
           </Card>
         )}
 
@@ -193,16 +343,33 @@ export default function AdminDashboardScreen() {
                     <Text className="text-lg font-bold text-white mb-0.5">
                       {isPersian && item.faTitle ? item.faTitle : item.title}
                     </Text>
-                    <Text className="text-slate-400 text-xs">
-                      {item.title}
-                    </Text>
+                    {item.faTitle && (
+                      <Text className="text-slate-400 text-xs">
+                        {item.title}
+                      </Text>
+                    )}
                   </View>
-                  <Badge label={item.status.toUpperCase()} variant={item.status === 'published' ? 'success' : 'warning'} />
+                  <View className="flex-row gap-1.5 items-center">
+                    {item.youtubeVideoId && (
+                      <Badge label="📺 YouTube" variant="danger" />
+                    )}
+                    <Badge label={item.status.toUpperCase()} variant={item.status === 'published' ? 'success' : 'warning'} />
+                  </View>
                 </View>
 
                 <Text className="text-slate-300 text-sm mb-3" numberOfLines={2}>
-                  {isPersian && item.faDescription ? item.faDescription : item.description}
+                  {item.body ? item.body : (isPersian && item.faDescription ? item.faDescription : item.description)}
                 </Text>
+
+                {item.keywords && item.keywords.length > 0 && (
+                  <View className="flex-row flex-wrap gap-1.5 mb-3">
+                    {item.keywords.map((kw, i) => (
+                      <Text key={i} className="text-brand-300 text-[10px] bg-brand-950/80 border border-brand-800/60 px-2 py-0.5 rounded-md font-medium">
+                        #{kw}
+                      </Text>
+                    ))}
+                  </View>
+                )}
 
                 <View className="flex-row justify-between items-center border-t border-surface-border/60 pt-3">
                   <Text className="text-xs text-gold-400 font-semibold">

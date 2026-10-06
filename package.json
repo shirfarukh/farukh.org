@@ -13,12 +13,12 @@
     "format": "prettier --write .",
     "test": "jest",
     "test:rules": "jest tests/rules.test.ts",
-    "emulators": "firebase emulators:start --only auth,firestore,functions,storage,hosting",
+    "emulators": "firebase emulators:start --only auth,database,firestore,functions,storage,hosting",
     "seed": "npx ts-node scripts/seed.ts",
     "make-admin": "npx ts-node scripts/make-admin.ts",
     "deploy:web": "npm run export:web && firebase deploy --only hosting",
     "deploy:functions": "firebase deploy --only functions",
-    "deploy:rules": "firebase deploy --only firestore:rules,storage:rules"
+    "deploy:rules": "firebase deploy --only firestore:rules,storage:rules,database"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.4.2",

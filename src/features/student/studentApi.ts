@@ -8,101 +8,45 @@ import {
   where,
   orderBy,
   serverTimestamp,
-} from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '../../lib/firebase';
+  arrayUnion,
+  arrayRemove,
+} from '@firebase/firestore';
+import { ref, get, set } from '@firebase/database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { httpsCallable } from '@firebase/functions';
+import { db, functions, rtdb } from '../../lib/firebase';
 import { Course } from '../../types/course';
 import { LessonProgress } from '../../types/lesson';
 
-const FALLBACK_COURSES: (Course & { faTitle?: string; faDescription?: string; sampleLessons?: { title: string; duration: string; description: string }[] })[] = [
-  {
-    id: 'course-entrepreneurship-101',
-    title: 'Entrepreneurship & Startup Growth Strategy',
-    faTitle: 'استراتژی‌های توسعه کسب‌وکار و کارآفرینی',
-    slug: 'entrepreneurship-startup-growth',
-    description: 'Master business planning, product-market fit, capital allocation, and team scaling for modern startups.',
-    faDescription: 'آموزش جامع استراتژی‌های کسب‌وکار، تحلیل بازار، شتاب‌دهی و راه‌اندازی استارت‌آپ‌های موفق.',
-    coverUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80',
-    status: 'published',
-    order: 1,
-    passPercentage: 80,
-    exam: {
-      questionCount: 10,
-      timeLimitMin: 25,
-      maxAttempts: 3,
-      cooldownHours: 24,
-    },
-    lessonCount: 5,
-    sampleLessons: [
-      { title: '1. Identifying High-Impact Market Opportunities', duration: '18 min', description: 'Analyzing market gaps, customer pain points, and competitive moats.' },
-      { title: '2. Value Proposition & Minimum Viable Product (MVP)', duration: '24 min', description: 'Designing, prototyping, and testing MVPs with real customer feedback loops.' },
-      { title: '3. Financial Modeling & Unit Economics', duration: '30 min', description: 'Calculating CAC, LTV, burn rate, cash flow, and runway optimization.' },
-      { title: '4. Go-To-Market (GTM) Strategy & Customer Acquisition', duration: '22 min', description: 'Building scalable sales channels, digital marketing, and growth loops.' },
-      { title: '5. Scaling Operations & Leadership Resilience', duration: '28 min', description: 'Building resilient cultures, hiring top talent, and managing growth crises.' },
-    ],
-  },
-  {
-    id: 'course-tech-fullstack-102',
-    title: 'Full-Stack App Development & Modern Cloud Architecture',
-    faTitle: 'توسعه برنامه‌های پیشرفته و معماری ابری',
-    slug: 'fullstack-app-dev-cloud',
-    description: 'Learn modern Web & Mobile development with React Native, Expo, Cloud Functions, and Firebase backends.',
-    faDescription: 'توسعه وب و اپلیکیشن‌های موبایل با متدهای بروز، پایگاه داده تعاملی و زیرساخت‌های ابری.',
-    coverUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
-    status: 'published',
-    order: 2,
-    passPercentage: 80,
-    exam: {
-      questionCount: 12,
-      timeLimitMin: 30,
-      maxAttempts: 3,
-      cooldownHours: 24,
-    },
-    lessonCount: 6,
-    sampleLessons: [
-      { title: '1. Architecture Setup & Expo Navigation', duration: '20 min', description: 'Configuring cross-platform React Native projects with TypeScript.' },
-      { title: '2. State Management & React Query Hooks', duration: '25 min', description: 'Handling API data caching, optimistic updates, and offline sync.' },
-      { title: '3. Database Design & Security Rules', duration: '32 min', description: 'Designing Firestore schemas, indexing, and authorization rules.' },
-      { title: '4. Cloud Functions & Serverless API Routes', duration: '27 min', description: 'Writing secure background jobs, webhooks, and payment webhooks.' },
-    ],
-  },
-  {
-    id: 'course-leadership-103',
-    title: 'Executive Leadership & Strategic Decision Making',
-    faTitle: 'مدیریت ارشد و تصمیم‌گیری استراتژیک',
-    slug: 'executive-leadership-strategy',
-    description: 'Essential leadership frameworks for managing high-performing remote and hybrid teams in dynamic environments.',
-    faDescription: 'اصول مدیریت رهبری، هدایت تیم‌های تخصصی و اتخاذ تصمیم‌های استراتژیک در شرایط تغییر.',
-    coverUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop&q=80',
-    status: 'published',
-    order: 3,
-    passPercentage: 85,
-    exam: {
-      questionCount: 10,
-      timeLimitMin: 20,
-      maxAttempts: 3,
-      cooldownHours: 12,
-    },
-    lessonCount: 4,
-    sampleLessons: [
-      { title: '1. Visionary Leadership & Strategic Alignment', duration: '15 min', description: 'Setting OKRs, company vision, and cascading goals across units.' },
-      { title: '2. Conflict Resolution & Communication Mastery', duration: '22 min', description: 'Navigating difficult conversations and negotiating high-stakes deals.' },
-      { title: '3. Decision Matrix & Risk Mitigation', duration: '25 min', description: 'Frameworks for evaluating strategic trade-offs under high uncertainty.' },
-    ],
-  },
-];
+function formatCourseWithCover(id: string, data: any): Course {
+  const youtubeVideoId = data.youtubeVideoId || (data.youtubeUrl ? data.youtubeUrl.split('v=')[1]?.split('&')[0] : null);
+  const coverUrl =
+    data.coverUrl ||
+    (youtubeVideoId
+      ? `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`
+      : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop');
+
+  return {
+    id,
+    ...data,
+    youtubeVideoId: youtubeVideoId || data.youtubeVideoId,
+    coverUrl,
+  } as Course;
+}
 
 export async function getPublishedCourses(): Promise<Course[]> {
   try {
-    const q = query(collection(db, 'courses'), where('status', '==', 'published'), orderBy('order', 'asc'));
+    const q = query(collection(db, 'courses'), where('status', '==', 'published'));
     const snap = await getDocs(q);
-    if (!snap.empty) {
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Course));
-    }
+    const courses = snap.docs.map((d) => formatCourseWithCover(d.id, d.data()));
+
+    // Sort by order or createdAt
+    courses.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+    return courses;
   } catch (err) {
-    console.warn('Firestore offline or unreachable, serving featured courses catalog:', err);
+    console.error('Failed to fetch published courses from Firestore:', err);
+    return [];
   }
-  return FALLBACK_COURSES;
 }
 
 export async function getCourseDetail(courseId: string): Promise<Course | null> {
@@ -110,12 +54,20 @@ export async function getCourseDetail(courseId: string): Promise<Course | null> 
     const ref = doc(db, 'courses', courseId);
     const snap = await getDoc(ref);
     if (snap.exists()) {
-      return { id: snap.id, ...snap.data() } as Course;
+      return formatCourseWithCover(snap.id, snap.data());
+    }
+
+    // Try slug lookup
+    const slugQ = query(collection(db, 'courses'), where('slug', '==', courseId));
+    const slugSnap = await getDocs(slugQ);
+    if (!slugSnap.empty) {
+      const d = slugSnap.docs[0];
+      return formatCourseWithCover(d.id, d.data());
     }
   } catch (err) {
-    console.warn('Firestore fallback for course detail:', err);
+    console.error('Error fetching course detail from Firestore:', err);
   }
-  return FALLBACK_COURSES.find((c) => c.id === courseId || c.slug === courseId) || FALLBACK_COURSES[0];
+  return null;
 }
 
 export async function getCourseProgress(uid: string, courseId: string): Promise<Record<string, LessonProgress>> {
@@ -129,18 +81,140 @@ export async function getCourseProgress(uid: string, courseId: string): Promise<
   }
 }
 
-export async function enrollInCourse(uid: string, courseId: string): Promise<void> {
+export async function getUserEnrolledCourseIds(uid: string): Promise<string[]> {
+  if (!uid) return [];
+  const storageKey = `enrolled_courses_${uid}`;
+
+  let localEnrolled: string[] = [];
   try {
-    const ref = doc(db, 'enrollments', `${uid}_${courseId}`);
-    await setDoc(ref, {
-      uid,
-      courseId,
-      startedAt: serverTimestamp(),
-      status: 'enrolled',
-    }, { merge: true });
-  } catch {
-    console.log('Enrolled in offline mode');
+    const raw = await AsyncStorage.getItem(storageKey);
+    if (raw) {
+      localEnrolled = JSON.parse(raw);
+    }
+  } catch {}
+
+  try {
+    // 1. Try reading from Firestore users/{uid}
+    const userSnap = await getDoc(doc(db, 'users', uid));
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      if (Array.isArray(data?.enrolledCourseIds) && data.enrolledCourseIds.length > 0) {
+        const merged = Array.from(new Set([...localEnrolled, ...data.enrolledCourseIds]));
+        await AsyncStorage.setItem(storageKey, JSON.stringify(merged));
+        return merged;
+      }
+    }
+
+    // 2. Try reading from RTDB userEnrollments/{uid}
+    try {
+      const rtdbSnap = await get(ref(rtdb, `userEnrollments/${uid}`));
+      if (rtdbSnap.exists()) {
+        const val = rtdbSnap.val();
+        if (val) {
+          const rtdbIds = Object.keys(val).filter((k) => !!val[k]);
+          if (rtdbIds.length > 0) {
+            const merged = Array.from(new Set([...localEnrolled, ...rtdbIds]));
+            await AsyncStorage.setItem(storageKey, JSON.stringify(merged));
+            return merged;
+          }
+        }
+      }
+    } catch {}
+
+    // 3. Try reading from Firestore enrollments collection
+    const enrollQ = query(collection(db, 'enrollments'), where('uid', '==', uid));
+    const snap = await getDocs(enrollQ);
+    if (!snap.empty) {
+      const ids = snap.docs.map((d) => d.data().courseId).filter(Boolean);
+      const merged = Array.from(new Set([...localEnrolled, ...ids]));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(merged));
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Lookup for enrolled courses failed, using fallback:', err);
   }
+
+  if (localEnrolled.length > 0) {
+    return localEnrolled;
+  }
+
+  return [];
+}
+
+export async function enrollInCourse(uid: string, courseId: string): Promise<void> {
+  if (!uid || !courseId) return;
+  const storageKey = `enrolled_courses_${uid}`;
+
+  // 1. Immediately persist locally in AsyncStorage
+  try {
+    const raw = await AsyncStorage.getItem(storageKey);
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(courseId)) {
+      list.push(courseId);
+      await AsyncStorage.setItem(storageKey, JSON.stringify(list));
+    }
+  } catch {}
+
+  // 2. Persist to Firestore user document
+  try {
+    await setDoc(
+      doc(db, 'users', uid),
+      {
+        enrolledCourseIds: arrayUnion(courseId),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch {}
+
+  // 3. Persist to Realtime Database
+  try {
+    await set(ref(rtdb, `userEnrollments/${uid}/${courseId}`), {
+      enrolledAt: Date.now(),
+      status: 'active',
+    });
+  } catch {}
+
+  // 4. Enrollments collection
+  try {
+    const refDoc = doc(db, 'enrollments', `${uid}_${courseId}`);
+    await setDoc(
+      refDoc,
+      {
+        uid,
+        courseId,
+        startedAt: serverTimestamp(),
+        status: 'enrolled',
+      },
+      { merge: true }
+    );
+  } catch {}
+}
+
+export async function unenrollFromCourse(uid: string, courseId: string): Promise<void> {
+  if (!uid || !courseId) return;
+  const storageKey = `enrolled_courses_${uid}`;
+
+  try {
+    const raw = await AsyncStorage.getItem(storageKey);
+    let list: string[] = raw ? JSON.parse(raw) : [];
+    list = list.filter((id) => id !== courseId);
+    await AsyncStorage.setItem(storageKey, JSON.stringify(list));
+  } catch {}
+
+  try {
+    await setDoc(
+      doc(db, 'users', uid),
+      {
+        enrolledCourseIds: arrayRemove(courseId),
+      },
+      { merge: true }
+    );
+  } catch {}
+
+  try {
+    await set(ref(rtdb, `userEnrollments/${uid}/${courseId}`), null);
+  } catch {}
 }
 
 export async function submitQuizCallable(courseId: string, lessonId: string, answers: Record<string, string>) {

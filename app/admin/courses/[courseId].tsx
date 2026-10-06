@@ -9,6 +9,7 @@ import { Input } from '../../../src/components/ui/Input';
 import { Badge } from '../../../src/components/ui/Badge';
 import {
   getAdminCourses,
+  createOrUpdateCourse,
   getCourseModules,
   getCourseLessons,
   createModule,
@@ -18,6 +19,7 @@ import {
 } from '../../../src/features/admin/adminApi';
 import { parseBulkQuestions } from '../../../src/features/admin/csvImport';
 import { extractYouTubeId } from '../../../src/lib/utils';
+import { Image, TouchableOpacity } from 'react-native';
 
 export default function AdminCourseEditScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
@@ -25,6 +27,14 @@ export default function AdminCourseEditScreen() {
 
   const [newModuleTitle, setNewModuleTitle] = useState('');
   const [showAddLesson, setShowAddLesson] = useState<string | null>(null);
+
+  // Course Details Edit State
+  const [isEditingCourse, setIsEditingCourse] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [editKeywords, setEditKeywords] = useState('');
+  const [editYouTubeUrl, setEditYouTubeUrl] = useState('');
+  const [saveCourseSuccess, setSaveCourseSuccess] = useState(false);
 
   // Lesson Form State
   const [lessonTitle, setLessonTitle] = useState('');
@@ -40,6 +50,16 @@ export default function AdminCourseEditScreen() {
     queryFn: getAdminCourses,
   });
   const course = courses.find((c) => c.id === courseId);
+
+  // Initialize edit fields when course is loaded or toggled
+  React.useEffect(() => {
+    if (course) {
+      setEditTitle(course.title || '');
+      setEditBody(course.body || course.description || '');
+      setEditKeywords(course.keywords ? course.keywords.join(', ') : '');
+      setEditYouTubeUrl(course.youtubeUrl || (course.youtubeVideoId ? `https://www.youtube.com/watch?v=${course.youtubeVideoId}` : ''));
+    }
+  }, [course?.id, isEditingCourse]);
 
   const { data: modules = [] } = useQuery({
     queryKey: ['adminModules', courseId],
@@ -109,6 +129,36 @@ export default function AdminCourseEditScreen() {
     },
   });
 
+  const updateCourseMutation = useMutation({
+    mutationFn: async () => {
+      if (!courseId || !editTitle.trim()) return;
+      const detectedVid = extractYouTubeId(editYouTubeUrl);
+      const vid = detectedVid || (editYouTubeUrl.trim().length === 11 ? editYouTubeUrl.trim() : undefined);
+      const kwList = editKeywords
+        .split(/[,،]+/)
+        .map((k) => k.trim())
+        .filter((k) => k.length > 0);
+
+      await createOrUpdateCourse(
+        {
+          title: editTitle.trim(),
+          description: editBody.trim() ? editBody.trim().slice(0, 160) + '...' : editTitle.trim(),
+          body: editBody.trim() || undefined,
+          keywords: kwList,
+          youtubeUrl: editYouTubeUrl.trim() || undefined,
+          youtubeVideoId: vid,
+        },
+        courseId
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCourses'] });
+      setSaveCourseSuccess(true);
+      setTimeout(() => setSaveCourseSuccess(false), 3000);
+      setIsEditingCourse(false);
+    },
+  });
+
   if (!course) {
     return (
       <View className="flex-1 bg-surface-dark justify-center items-center">
@@ -117,13 +167,108 @@ export default function AdminCourseEditScreen() {
     );
   }
 
+  const detectedEditVid = extractYouTubeId(editYouTubeUrl);
+
   return (
     <ScreenWrapper>
       <View className="max-w-4xl w-full self-center">
-        <View className="mb-6">
-          <Text className="text-2xl font-bold text-white">{course.title}</Text>
-          <Text className="text-slate-400 text-sm mt-1">{course.description}</Text>
-        </View>
+        {/* Course Header Banner */}
+        <Card className="mb-6 border-brand-500/60 bg-surface-card p-5">
+          <View className="flex-row justify-between items-start mb-3">
+            <View className="flex-1 mr-3">
+              <View className="flex-row items-center gap-2 mb-1">
+                <Text className="text-2xl font-bold text-white">{course.title}</Text>
+                <Badge label={course.status?.toUpperCase() || 'PUBLISHED'} variant="success" />
+              </View>
+              <Text className="text-slate-300 text-sm mt-1">{course.body || course.description}</Text>
+            </View>
+
+            <Button
+              title={isEditingCourse ? 'Close' : '✎ Edit Course Info'}
+              variant={isEditingCourse ? 'secondary' : 'outline'}
+              onPress={() => setIsEditingCourse(!isEditingCourse)}
+            />
+          </View>
+
+          {/* Keywords & YouTube Preview Badges */}
+          <View className="flex-row flex-wrap gap-2 items-center pt-2 border-t border-surface-border">
+            {course.youtubeVideoId && (
+              <View className="flex-row items-center gap-1.5 bg-red-950/60 border border-red-800/80 px-2.5 py-1 rounded-lg">
+                <Text className="text-red-300 text-xs font-semibold">📺 YouTube: {course.youtubeVideoId}</Text>
+              </View>
+            )}
+            {course.keywords && course.keywords.length > 0 && (
+              <View className="flex-row flex-wrap gap-1.5 items-center">
+                {course.keywords.map((kw, i) => (
+                  <View key={i} className="bg-brand-950/80 border border-brand-800/60 px-2.5 py-0.5 rounded-full">
+                    <Text className="text-brand-300 text-xs">#{kw}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {saveCourseSuccess && (
+            <View className="mt-3 p-2.5 bg-emerald-950/60 border border-emerald-500/60 rounded-xl">
+              <Text className="text-emerald-300 text-xs font-bold">✓ Course details updated in Firebase!</Text>
+            </View>
+          )}
+
+          {/* Inline Edit Form */}
+          {isEditingCourse && (
+            <View className="mt-4 pt-4 border-t border-surface-border">
+              <Text className="text-white font-bold text-base mb-3">Edit Course Information</Text>
+              <Input
+                label="Course Title"
+                value={editTitle}
+                onChangeText={setEditTitle}
+                placeholder="Course title..."
+              />
+              <Input
+                label="Course Body & Detailed Syllabus"
+                value={editBody}
+                onChangeText={setEditBody}
+                placeholder="Full course content..."
+                multiline
+                numberOfLines={4}
+              />
+              <Input
+                label="Keywords / Tags (comma-separated)"
+                value={editKeywords}
+                onChangeText={setEditKeywords}
+                placeholder="e.g. AI, React, Architecture"
+              />
+              <Input
+                label="YouTube Video Link (Optional)"
+                value={editYouTubeUrl}
+                onChangeText={setEditYouTubeUrl}
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+              {detectedEditVid && (
+                <View className="mb-3 p-2 bg-surface-dark rounded-xl border border-emerald-500/50 flex-row items-center gap-3">
+                  <Image
+                    source={{ uri: `https://img.youtube.com/vi/${detectedEditVid}/mqdefault.jpg` }}
+                    style={{ width: 70, height: 42, borderRadius: 6 }}
+                  />
+                  <Text className="text-emerald-400 text-xs font-semibold">Valid Video ID: {detectedEditVid}</Text>
+                </View>
+              )}
+              <View className="flex-row gap-2 mt-2">
+                <Button
+                  title="Save Changes to Firebase"
+                  onPress={() => updateCourseMutation.mutate()}
+                  loading={updateCourseMutation.isPending}
+                  className="flex-1"
+                />
+                <Button
+                  title="Cancel"
+                  variant="outline"
+                  onPress={() => setIsEditingCourse(false)}
+                />
+              </View>
+            </View>
+          )}
+        </Card>
 
         {/* Modules & Lessons Section */}
         <Text className="text-xl font-bold text-white mb-3">Modules & Lessons</Text>

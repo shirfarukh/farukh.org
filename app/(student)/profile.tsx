@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile } from '@firebase/auth';
 import { ScreenWrapper } from '../../src/components/ui/ScreenWrapper';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
 import { Badge } from '../../src/components/ui/Badge';
 import { useAuth } from '../../src/features/auth/useAuth';
+import { useAuthStore } from '../../src/features/auth/authStore';
+import { doc, setDoc } from '@firebase/firestore';
+import { db } from '../../src/lib/firebase';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isAdmin, logout } = useAuth();
+  const setUser = useAuthStore((s) => s.setUser);
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -22,6 +26,12 @@ export default function ProfileScreen() {
     setMessage('');
     try {
       await updateProfile(user, { displayName });
+      // Update local store
+      setUser({ ...user, displayName }, isAdmin);
+      // Update Firestore user document
+      try {
+        await setDoc(doc(db, 'users', user.uid), { displayName }, { merge: true });
+      } catch {}
       setMessage('Profile updated successfully!');
     } catch {
       setMessage('Failed to update profile.');

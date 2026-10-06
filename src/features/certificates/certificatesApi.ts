@@ -1,5 +1,5 @@
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
+import { collection, query, where, getDocs, orderBy } from '@firebase/firestore';
+import { httpsCallable } from '@firebase/functions';
 import { db, functions } from '../../lib/firebase';
 import { Certificate } from '../../types/certificate';
 

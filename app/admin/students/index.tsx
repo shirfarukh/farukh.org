@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
+import { collection, getDocs, query, orderBy } from '@firebase/firestore';
+import { httpsCallable } from '@firebase/functions';
 import { db, functions } from '../../../src/lib/firebase';
 import { ScreenWrapper } from '../../../src/components/ui/ScreenWrapper';
 import { Card } from '../../../src/components/ui/Card';

@@ -1,4 +1,7 @@
 {
+  "database": {
+    "rules": "database.rules.json"
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
@@ -35,6 +38,9 @@
   "emulators": {
     "auth": {
       "port": 9099
+    },
+    "database": {
+      "port": 9000
     },
     "functions": {
       "port": 5001

@@ -16,7 +16,7 @@ export default function LoginScreen() {
   const isPersian = i18n.language?.startsWith('fa');
 
   const [email, setEmail] = useState('shir@secureai.be');
-  const [password, setPassword] = useState('123');
+  const [password, setPassword] = useState('123456');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 

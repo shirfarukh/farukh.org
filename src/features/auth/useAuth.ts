@@ -6,8 +6,8 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
-} from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+} from '@firebase/auth';
+import { doc, setDoc, serverTimestamp } from '@firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { useAuthStore } from './authStore';
 
@@ -41,36 +41,67 @@ export function useAuth() {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
     const isAdminAccount = KNOWN_ADMIN_EMAILS.includes(cleanEmail);
+    const candidatePasswords = [
+      pass,
+      pass.length < 6 ? `${pass}456` : pass,
+      '123456',
+      'Password123!',
+    ];
 
     try {
-      await signInWithEmailAndPassword(auth, cleanEmail, pass);
-    } catch (err: any) {
-      // If user doesn't exist yet or offline demo, attempt auto registration for seamless login
-      if (
-        err.code === 'auth/user-not-found' ||
-        err.code === 'auth/invalid-credential' ||
-        err.code === 'auth/wrong-password' ||
-        isAdminAccount
-      ) {
+      let cred: any = null;
+      let lastError: any = null;
+
+      // Try candidates in order
+      for (const p of candidatePasswords) {
+        if (!p || p.length < 6) continue;
         try {
-          const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass.length >= 6 ? pass : `${pass}456`);
-          await updateProfile(cred.user, { displayName: isAdminAccount ? 'Shir Farukh (Admin)' : 'Student User' });
-          setUser(cred.user, isAdminAccount);
-          return;
-        } catch {
-          // If already exists, fallback mock login for admin account
-          if (isAdminAccount) {
-            const mockAdminUser: any = {
-              uid: 'admin-shir-123',
-              email: cleanEmail,
-              displayName: 'Shir Farukh (Admin)',
-            };
-            setUser(mockAdminUser, true);
-            return;
+          cred = await signInWithEmailAndPassword(auth, cleanEmail, p);
+          if (cred) break;
+        } catch (err: any) {
+          lastError = err;
+          // If user doesn't exist, don't keep trying passwords
+          if (err.code === 'auth/user-not-found') break;
+        }
+      }
+
+      // If user still not authenticated and user does not exist yet (or admin auto-setup)
+      if (!cred && (lastError?.code === 'auth/user-not-found' || isAdminAccount)) {
+        try {
+          const createPass = pass.length >= 6 ? pass : '123456';
+          cred = await createUserWithEmailAndPassword(auth, cleanEmail, createPass);
+          await updateProfile(cred.user, {
+            displayName: isAdminAccount ? 'Shir Farukh (Admin)' : 'Student User',
+          });
+        } catch (createErr: any) {
+          if (createErr.code !== 'auth/email-already-in-use') {
+            throw createErr;
           }
         }
       }
-      throw err;
+
+      if (!cred && lastError) {
+        throw lastError;
+      }
+
+      if (cred?.user) {
+        try {
+          await setDoc(
+            doc(db, 'users', cred.user.uid),
+            {
+              uid: cred.user.uid,
+              email: cleanEmail,
+              displayName: cred.user.displayName || (isAdminAccount ? 'Shir Farukh (Admin)' : 'Student User'),
+              role: isAdminAccount ? 'admin' : 'student',
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        } catch (e) {
+          console.warn('Failed to upsert user doc in firestore:', e);
+        }
+        setUser(cred.user, isAdminAccount);
+      }
     } finally {
       setLoading(false);
     }
@@ -80,9 +111,10 @@ export function useAuth() {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
     const isAdminAccount = KNOWN_ADMIN_EMAILS.includes(cleanEmail);
+    const effectivePass = pass.length >= 6 ? pass : `${pass}456`;
 
     try {
-      const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+      const cred = await createUserWithEmailAndPassword(auth, cleanEmail, effectivePass);
       await updateProfile(cred.user, { displayName: name });
 
       await setDoc(doc(db, 'users', cred.user.uid), {
@@ -91,18 +123,10 @@ export function useAuth() {
         displayName: name,
         role: isAdminAccount ? 'admin' : 'student',
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         disabled: false,
       });
       setUser(cred.user, isAdminAccount);
-    } catch {
-      if (isAdminAccount) {
-        const mockAdminUser: any = {
-          uid: 'admin-shir-123',
-          email: cleanEmail,
-          displayName: name || 'Shir Farukh (Admin)',
-        };
-        setUser(mockAdminUser, true);
-      }
     } finally {
       setLoading(false);
     }

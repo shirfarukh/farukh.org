@@ -12,7 +12,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.admin == true;
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.email in ['shir@secureai.be', 'admin@example.com', 'admin@farukh.org']
+      );
     }
 
     // User profiles

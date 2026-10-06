@@ -7,6 +7,7 @@ import { Card } from '../../../src/components/ui/Card';
 import { Button } from '../../../src/components/ui/Button';
 import { Badge } from '../../../src/components/ui/Badge';
 import { ProgressBar } from '../../../src/components/ProgressBar';
+import { LessonVideo } from '../../../src/components/LessonVideo';
 import { useAuth } from '../../../src/features/auth/useAuth';
 import {
   getCourseDetail,
@@ -76,7 +77,23 @@ export default function StudentCourseDetailScreen() {
         {/* Header Banner */}
         <Card className="mb-6 border-brand-500">
           <Text className="text-2xl font-bold text-white mb-2">{course.title}</Text>
-          <Text className="text-slate-300 text-sm mb-4 leading-6">{course.description}</Text>
+          <Text className="text-slate-300 text-sm mb-3 leading-6">{course.body || course.description}</Text>
+
+          {course.keywords && course.keywords.length > 0 && (
+            <View className="flex-row flex-wrap gap-1.5 mb-4">
+              {course.keywords.map((kw, i) => (
+                <View key={i} className="bg-brand-950/80 border border-brand-800/60 px-2.5 py-0.5 rounded-full">
+                  <Text className="text-brand-300 text-xs">#{kw}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {course.youtubeVideoId && (
+            <View className="mb-4 rounded-2xl overflow-hidden border border-surface-border">
+              <LessonVideo videoId={course.youtubeVideoId} />
+            </View>
+          )}
 
           <ProgressBar progress={progressPercent} />
 

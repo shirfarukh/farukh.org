@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../features/theme/ThemeContext';
 
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const { i18n } = useTranslation();
+  const { isDark } = useTheme();
   const currentLang = i18n.language || 'en';
 
   const toggleLanguage = (lang: string) => {
@@ -11,20 +13,48 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
   };
 
   return (
-    <View className={`flex-row items-center bg-surface-dark border border-gold-400/40 rounded-full p-1 shadow-md ${className}`}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: isDark ? '#030819' : '#FFFFFF',
+        borderColor: isDark ? 'rgba(250,204,21,0.35)' : '#E2E8F0',
+        borderWidth: 1,
+        borderRadius: 99,
+        padding: 3,
+        shadowColor: '#000',
+        shadowOpacity: isDark ? 0.3 : 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+      }}
+      className={className}
+    >
       <TouchableOpacity
         onPress={() => toggleLanguage('en')}
-        className={`px-3 py-1.5 rounded-full flex-row items-center gap-1.5 ${
-          currentLang.startsWith('en')
-            ? 'bg-brand-600 border border-gold-400/80 shadow'
-            : 'bg-transparent'
-        }`}
+        activeOpacity={0.7}
+        style={{
+          paddingHorizontal: 10,
+          paddingVertical: 5,
+          borderRadius: 99,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 5,
+          backgroundColor: currentLang.startsWith('en')
+            ? (isDark ? '#0B25B7' : '#2563EB')
+            : 'transparent',
+          borderWidth: currentLang.startsWith('en') ? 1 : 0,
+          borderColor: isDark ? 'rgba(250,204,21,0.6)' : 'rgba(37,99,235,0.4)',
+        }}
       >
-        <Text className="text-xs">🇺🇸</Text>
+        <Text style={{ fontSize: 12 }}>🇺🇸</Text>
         <Text
-          className={`text-xs font-bold ${
-            currentLang.startsWith('en') ? 'text-white' : 'text-slate-300'
-          }`}
+          style={{
+            fontSize: 11,
+            fontWeight: '700',
+            color: currentLang.startsWith('en')
+              ? '#FFFFFF'
+              : (isDark ? '#94A3B8' : '#64748B'),
+          }}
         >
           EN
         </Text>
@@ -32,17 +62,30 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
 
       <TouchableOpacity
         onPress={() => toggleLanguage('fa')}
-        className={`px-3 py-1.5 rounded-full flex-row items-center gap-1.5 ${
-          currentLang.startsWith('fa')
-            ? 'bg-brand-600 border border-gold-400/80 shadow'
-            : 'bg-transparent'
-        }`}
+        activeOpacity={0.7}
+        style={{
+          paddingHorizontal: 10,
+          paddingVertical: 5,
+          borderRadius: 99,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 5,
+          backgroundColor: currentLang.startsWith('fa')
+            ? (isDark ? '#0B25B7' : '#2563EB')
+            : 'transparent',
+          borderWidth: currentLang.startsWith('fa') ? 1 : 0,
+          borderColor: isDark ? 'rgba(250,204,21,0.6)' : 'rgba(37,99,235,0.4)',
+        }}
       >
-        <Text className="text-xs">🇦🇫</Text>
+        <Text style={{ fontSize: 12 }}>🇦🇫</Text>
         <Text
-          className={`text-xs font-bold ${
-            currentLang.startsWith('fa') ? 'text-gold-300' : 'text-slate-300'
-          }`}
+          style={{
+            fontSize: 11,
+            fontWeight: '700',
+            color: currentLang.startsWith('fa')
+              ? '#FFFFFF'
+              : (isDark ? '#94A3B8' : '#64748B'),
+          }}
         >
           فارسی
         </Text>

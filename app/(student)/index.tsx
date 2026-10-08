@@ -22,8 +22,9 @@ import {
 } from '../../src/features/student/studentApi';
 import { getUserCertificates } from '../../src/features/certificates/certificatesApi';
 import { AppLogo } from '../../src/components/ui/AppLogo';
-import { LanguageSwitcher } from '../../src/components/ui/LanguageSwitcher';
+import { HeaderPreferences } from '../../src/components/ui/HeaderPreferences';
 import { useAuth } from '../../src/features/auth/useAuth';
+import { useTheme } from '../../src/features/theme/ThemeContext';
 
 // ─── Greeting helper ───────────────────────────────────────────────────────────
 function getGreeting(isPersian: boolean): string {
@@ -51,23 +52,25 @@ function getInitials(name: string | null | undefined): string {
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value }: { icon: string; label: string; value: string | number }) {
+  const { colors, isDark } = useTheme();
+
   return (
     <View
       style={{
         flex: 1,
         minWidth: 85,
-        backgroundColor: 'rgba(255,255,255,0.04)',
+        backgroundColor: colors.cardHover,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(250,204,21,0.2)',
+        borderColor: isDark ? 'rgba(250,204,21,0.2)' : colors.cardBorder,
         padding: 12,
         alignItems: 'center',
         gap: 3,
       }}
     >
       <Text style={{ fontSize: 20 }}>{icon}</Text>
-      <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 17 }}>{value}</Text>
-      <Text style={{ color: '#94A3B8', fontSize: 10, fontWeight: '600', textAlign: 'center' }}>{label}</Text>
+      <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 17 }}>{value}</Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: '600', textAlign: 'center' }}>{label}</Text>
     </View>
   );
 }
@@ -86,6 +89,7 @@ function EnrolledCourseCard({
   onUnenroll: () => void;
   isUnenrolling: boolean;
 }) {
+  const { colors, isDark } = useTheme();
   const title = isPersian && item.faTitle ? item.faTitle : item.title;
   const progress = item._progress ?? 35;
 
@@ -93,13 +97,13 @@ function EnrolledCourseCard({
     <View
       style={{
         marginBottom: 16,
-        backgroundColor: '#1E293B',
+        backgroundColor: colors.card,
         borderRadius: 22,
         borderWidth: 1,
-        borderColor: 'rgba(250,204,21,0.3)',
+        borderColor: isDark ? 'rgba(250,204,21,0.3)' : colors.cardBorder,
         padding: 18,
-        shadowColor: '#FACC15',
-        shadowOpacity: 0.08,
+        shadowColor: colors.gold,
+        shadowOpacity: isDark ? 0.08 : 0.04,
         shadowRadius: 14,
         elevation: 5,
       }}
@@ -108,7 +112,7 @@ function EnrolledCourseCard({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 }}>
           <Image
             source={{ uri: item.coverUrl }}
-            style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: '#0F172A' }}
+            style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: colors.bg }}
             resizeMode="cover"
           />
           <View style={{ flex: 1 }}>
@@ -117,21 +121,21 @@ function EnrolledCourseCard({
                 style={{
                   paddingHorizontal: 8,
                   paddingVertical: 3,
-                  backgroundColor: 'rgba(250,204,21,0.15)',
+                  backgroundColor: colors.goldBg,
                   borderRadius: 8,
                   borderWidth: 1,
-                  borderColor: 'rgba(250,204,21,0.4)',
+                  borderColor: colors.goldBorder,
                 }}
               >
-                <Text style={{ color: '#FACC15', fontSize: 10, fontWeight: '800' }}>
+                <Text style={{ color: colors.gold, fontSize: 10, fontWeight: '800' }}>
                   {isPersian ? 'ثبت‌نام شده' : 'REGISTERED'}
                 </Text>
               </View>
-              <Text style={{ color: '#64748B', fontSize: 11 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 11 }}>
                 {item.lessonCount || 5} {isPersian ? 'درس' : 'lessons'}
               </Text>
             </View>
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16, lineHeight: 22 }}>
+            <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, lineHeight: 22 }}>
               {title}
             </Text>
           </View>
@@ -141,31 +145,31 @@ function EnrolledCourseCard({
       {/* Progress bar */}
       <View style={{ marginBottom: 14 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-          <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '600' }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>
             {isPersian ? 'پیشرفت دوره' : 'Course Progress'}
           </Text>
-          <Text style={{ color: '#FACC15', fontSize: 12, fontWeight: '800' }}>{progress}%</Text>
+          <Text style={{ color: colors.gold, fontSize: 12, fontWeight: '800' }}>{progress}%</Text>
         </View>
-        <View style={{ height: 7, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 99 }}>
+        <View style={{ height: 7, backgroundColor: colors.cardHover, borderRadius: 99 }}>
           <View
             style={{
               height: '100%',
               width: `${Math.min(progress, 100)}%`,
               borderRadius: 99,
-              backgroundColor: progress >= 100 ? '#22C55E' : '#FACC15',
+              backgroundColor: progress >= 100 ? '#22C55E' : colors.gold,
             }}
           />
         </View>
       </View>
 
       {/* Actions */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingTop: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.cardBorder, paddingTop: 12 }}>
         <TouchableOpacity
           onPress={onUnenroll}
           disabled={isUnenrolling}
           style={{ paddingVertical: 4, paddingHorizontal: 6 }}
         >
-          <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>
+          <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600' }}>
             {isUnenrolling ? (isPersian ? 'در حال حذف...' : 'Dropping...') : (isPersian ? 'انصراف از دوره' : 'Drop Course')}
           </Text>
         </TouchableOpacity>
@@ -173,7 +177,7 @@ function EnrolledCourseCard({
         <TouchableOpacity
           onPress={onPress}
           style={{
-            backgroundColor: '#FACC15',
+            backgroundColor: colors.gold,
             borderRadius: 12,
             paddingHorizontal: 16,
             paddingVertical: 9,
@@ -182,7 +186,7 @@ function EnrolledCourseCard({
             gap: 6,
           }}
         >
-          <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 12 }}>
+          <Text style={{ color: isDark ? '#0F172A' : '#FFFFFF', fontWeight: '900', fontSize: 12 }}>
             {progress >= 100
               ? (isPersian ? '🎓 آزمون نهایی →' : '🎓 Take Exam →')
               : (isPersian ? '▶ ادامه یادگیری →' : '▶ Resume Course →')}
@@ -195,16 +199,22 @@ function EnrolledCourseCard({
 
 // ─── Guest Landing Hero (logged-out state) ───────────────────────────────────
 function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; t: any }) {
+  const { colors, isDark } = useTheme();
+
   return (
     <View
       style={{
         marginBottom: 28,
-        backgroundColor: '#1E293B',
+        backgroundColor: colors.card,
         borderRadius: 28,
         borderWidth: 1,
-        borderColor: 'rgba(59,130,246,0.35)',
-        padding: 26,
+        borderColor: isDark ? 'rgba(59,130,246,0.35)' : colors.cardBorder,
+        padding: 24,
         overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOpacity: isDark ? 0.2 : 0.05,
+        shadowRadius: 16,
+        elevation: 4,
       }}
     >
       {/* Decorative ambient glows */}
@@ -217,7 +227,7 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           height: 200,
           backgroundColor: '#3B82F6',
           borderRadius: 100,
-          opacity: 0.08,
+          opacity: isDark ? 0.08 : 0.04,
         }}
         pointerEvents="none"
       />
@@ -230,11 +240,12 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           height: 160,
           backgroundColor: '#FACC15',
           borderRadius: 80,
-          opacity: 0.06,
+          opacity: isDark ? 0.06 : 0.04,
         }}
         pointerEvents="none"
       />
 
+      {/* Top Bar - Clean & Decluttered */}
       <View
         style={{
           flexDirection: 'row',
@@ -243,67 +254,52 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           marginBottom: 20,
           paddingBottom: 16,
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255,255,255,0.08)',
+          borderBottomColor: colors.headerBorder,
         }}
       >
-        <AppLogo size={52} showText />
+        <AppLogo size={46} showText />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <HeaderPreferences compact />
           <TouchableOpacity
             onPress={() => router.push('/(auth)/login')}
             style={{
-              backgroundColor: '#2563EB',
+              backgroundColor: colors.primary,
               paddingHorizontal: 14,
               paddingVertical: 7,
-              borderRadius: 10,
+              borderRadius: 12,
             }}
           >
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>
               {t('signIn', 'Sign In')}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/(auth)/register')}
-            style={{
-              backgroundColor: 'rgba(250,204,21,0.15)',
-              borderWidth: 1,
-              borderColor: 'rgba(250,204,21,0.5)',
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              borderRadius: 10,
-            }}
-          >
-            <Text style={{ color: '#FACC15', fontWeight: '700', fontSize: 12 }}>
-              {t('signUp', 'Sign Up')}
-            </Text>
-          </TouchableOpacity>
-          <LanguageSwitcher />
         </View>
       </View>
 
       <View
         style={{
           alignSelf: 'flex-start',
-          backgroundColor: 'rgba(250,204,21,0.12)',
+          backgroundColor: colors.goldBg,
           borderWidth: 1,
-          borderColor: 'rgba(250,204,21,0.35)',
+          borderColor: colors.goldBorder,
           borderRadius: 10,
           paddingHorizontal: 10,
           paddingVertical: 4,
           marginBottom: 12,
         }}
       >
-        <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 10, letterSpacing: 1.5 }}>
+        <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 10, letterSpacing: 1.5 }}>
           {isPersian ? 'پلتفرم آموزش و کارآفرینی' : 'ENTREPRENEURSHIP & EDUCATION PLATFORM'}
         </Text>
       </View>
 
-      <Text style={{ color: '#fff', fontWeight: '900', fontSize: 26, lineHeight: 34, marginBottom: 12 }}>
+      <Text style={{ color: colors.text, fontWeight: '900', fontSize: 26, lineHeight: 34, marginBottom: 12 }}>
         {isPersian
           ? 'آموزش کارآفرینی،\nکسب‌وکار و مهارت‌های برتر'
           : 'Master Entrepreneurship,\nBusiness & High-Demand Skills'}
       </Text>
 
-      <Text style={{ color: '#94A3B8', fontSize: 14, lineHeight: 22, marginBottom: 20 }}>
+      <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 22, marginBottom: 20 }}>
         {isPersian
           ? 'دسترسی آزاد به دوره‌های تخصصی، مقالات و مدارک دیجیتال معتبر با ثبت‌نام رایگان.'
           : 'Explore interactive courses, expert insights, and verifiable digital certificates. Register in seconds to start learning.'}
@@ -315,15 +311,15 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           <View
             key={f}
             style={{
-              backgroundColor: 'rgba(255,255,255,0.05)',
+              backgroundColor: colors.cardHover,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
+              borderColor: colors.cardBorder,
               borderRadius: 99,
               paddingHorizontal: 12,
               paddingVertical: 5,
             }}
           >
-            <Text style={{ color: '#CBD5E1', fontSize: 11, fontWeight: '600' }}>{f}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>{f}</Text>
           </View>
         ))}
       </View>
@@ -333,13 +329,13 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           onPress={() => router.push('/(auth)/register')}
           style={{
             flex: 1,
-            backgroundColor: '#FACC15',
+            backgroundColor: colors.gold,
             borderRadius: 14,
             paddingVertical: 13,
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 13 }}>
+          <Text style={{ color: isDark ? '#0F172A' : '#FFFFFF', fontWeight: '900', fontSize: 13 }}>
             🚀 {t('signUp', 'Create Free Account')}
           </Text>
         </TouchableOpacity>
@@ -349,13 +345,13 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
             flex: 1,
             backgroundColor: 'transparent',
             borderWidth: 1,
-            borderColor: 'rgba(250,204,21,0.4)',
+            borderColor: colors.goldBorder,
             borderRadius: 14,
             paddingVertical: 13,
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#FACC15', fontWeight: '700', fontSize: 13 }}>
+          <Text style={{ color: colors.gold, fontWeight: '700', fontSize: 13 }}>
             ✨ {t('blog', 'Blog & Insights')}
           </Text>
         </TouchableOpacity>
@@ -384,6 +380,7 @@ function DashboardHero({
   isPersian: boolean;
   router: any;
 }) {
+  const { colors, isDark } = useTheme();
   const emailUsername = user?.email ? user.email.split('@')[0] : (user?.displayName || 'Student');
   const initials = getInitials(emailUsername);
 
@@ -391,19 +388,19 @@ function DashboardHero({
     <View
       style={{
         marginBottom: 24,
-        backgroundColor: '#1E293B',
+        backgroundColor: colors.card,
         borderRadius: 28,
         borderWidth: 1,
-        borderColor: 'rgba(250,204,21,0.35)',
+        borderColor: isDark ? 'rgba(250,204,21,0.35)' : colors.cardBorder,
         overflow: 'hidden',
-        shadowColor: '#FACC15',
-        shadowOpacity: 0.1,
+        shadowColor: colors.gold,
+        shadowOpacity: isDark ? 0.1 : 0.05,
         shadowRadius: 16,
         elevation: 6,
       }}
     >
       {/* Gold top accent strip */}
-      <View style={{ height: 4, backgroundColor: '#FACC15', borderTopLeftRadius: 28, borderTopRightRadius: 28 }} />
+      <View style={{ height: 4, backgroundColor: colors.gold, borderTopLeftRadius: 28, borderTopRightRadius: 28 }} />
 
       <View style={{ padding: 22 }}>
         {/* Top Profile Bar */}
@@ -419,27 +416,24 @@ function DashboardHero({
             {/* Avatar with gold border */}
             <View
               style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: '#2563EB',
+                width: 54,
+                height: 54,
+                borderRadius: 27,
+                backgroundColor: colors.primary,
                 borderWidth: 2.5,
-                borderColor: '#FACC15',
+                borderColor: colors.gold,
                 alignItems: 'center',
                 justifyContent: 'center',
-                shadowColor: '#000',
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
               }}
             >
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 20 }}>{initials}</Text>
             </View>
 
             <View>
-              <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '600', marginBottom: 2 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600', marginBottom: 2 }}>
                 {isPersian ? 'خوش آمدید،' : 'Welcome,'}
               </Text>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 20, letterSpacing: -0.3 }}>
+              <Text style={{ color: colors.text, fontWeight: '900', fontSize: 20, letterSpacing: -0.3 }}>
                 {emailUsername} 👋
               </Text>
             </View>
@@ -450,15 +444,15 @@ function DashboardHero({
               <TouchableOpacity
                 onPress={() => router.push('/admin' as any)}
                 style={{
-                  backgroundColor: 'rgba(250,204,21,0.12)',
+                  backgroundColor: colors.goldBg,
                   borderWidth: 1,
-                  borderColor: 'rgba(250,204,21,0.5)',
+                  borderColor: colors.goldBorder,
                   borderRadius: 12,
                   paddingHorizontal: 12,
                   paddingVertical: 7,
                 }}
               >
-                <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 11 }}>⚡ Admin Panel</Text>
+                <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 11 }}>⚡ Admin Panel</Text>
               </TouchableOpacity>
             )}
 
@@ -466,15 +460,15 @@ function DashboardHero({
               <TouchableOpacity
                 onPress={logout}
                 style={{
-                  backgroundColor: 'rgba(239,68,68,0.14)',
+                  backgroundColor: colors.dangerBg,
                   borderWidth: 1,
-                  borderColor: 'rgba(239,68,68,0.4)',
+                  borderColor: colors.danger,
                   borderRadius: 12,
                   paddingHorizontal: 12,
                   paddingVertical: 7,
                 }}
               >
-                <Text style={{ color: '#F87171', fontWeight: '800', fontSize: 11 }}>
+                <Text style={{ color: colors.danger, fontWeight: '800', fontSize: 11 }}>
                   🚪 {isPersian ? 'خروج' : 'Log Out'}
                 </Text>
               </TouchableOpacity>
@@ -490,15 +484,15 @@ function DashboardHero({
             justifyContent: 'space-between',
             marginBottom: 18,
             padding: 10,
-            backgroundColor: 'rgba(255,255,255,0.04)',
+            backgroundColor: colors.cardHover,
             borderRadius: 14,
             borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.08)',
+            borderColor: colors.cardBorder,
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
             <Text style={{ fontSize: 14 }}>📧</Text>
-            <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '500' }} numberOfLines={1}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500' }} numberOfLines={1}>
               {user.email}
             </Text>
           </View>
@@ -510,31 +504,31 @@ function DashboardHero({
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 5,
-                backgroundColor: 'rgba(34,197,94,0.12)',
+                backgroundColor: colors.successBg,
                 borderWidth: 1,
-                borderColor: 'rgba(34,197,94,0.4)',
+                borderColor: colors.success,
                 borderRadius: 8,
                 paddingHorizontal: 8,
                 paddingVertical: 3,
               }}
             >
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} />
-              <Text style={{ color: '#4ADE80', fontSize: 10, fontWeight: '800' }}>
+              <Text style={{ color: colors.success, fontSize: 10, fontWeight: '800' }}>
                 ONLINE
               </Text>
             </View>
 
             <View
               style={{
-                backgroundColor: isAdmin ? 'rgba(250,204,21,0.15)' : 'rgba(59,130,246,0.15)',
+                backgroundColor: isAdmin ? colors.goldBg : colors.badgeBg,
                 borderRadius: 8,
                 paddingHorizontal: 8,
                 paddingVertical: 3,
                 borderWidth: 1,
-                borderColor: isAdmin ? 'rgba(250,204,21,0.4)' : 'rgba(59,130,246,0.4)',
+                borderColor: isAdmin ? colors.goldBorder : colors.cardBorder,
               }}
             >
-              <Text style={{ color: isAdmin ? '#FACC15' : '#60A5FA', fontSize: 10, fontWeight: '800' }}>
+              <Text style={{ color: isAdmin ? colors.gold : colors.badgeText, fontSize: 10, fontWeight: '800' }}>
                 {isAdmin ? 'ADMIN' : 'STUDENT'}
               </Text>
             </View>
@@ -555,15 +549,15 @@ function DashboardHero({
             onPress={() => router.push('/(student)/certificates' as any)}
             style={{
               flex: 1,
-              backgroundColor: 'rgba(250,204,21,0.1)',
+              backgroundColor: colors.goldBg,
               borderWidth: 1,
-              borderColor: 'rgba(250,204,21,0.35)',
+              borderColor: colors.goldBorder,
               borderRadius: 14,
               paddingVertical: 11,
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 12 }}>
+            <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 12 }}>
               🎓 {isPersian ? 'گواهینامه‌های من' : 'My Certificates'}
             </Text>
           </TouchableOpacity>
@@ -571,15 +565,15 @@ function DashboardHero({
             onPress={() => router.push('/(student)/profile' as any)}
             style={{
               flex: 1,
-              backgroundColor: 'rgba(59,130,246,0.1)',
+              backgroundColor: colors.primaryBg,
               borderWidth: 1,
-              borderColor: 'rgba(59,130,246,0.35)',
+              borderColor: isDark ? 'rgba(59,130,246,0.35)' : 'rgba(11,37,183,0.2)',
               borderRadius: 14,
               paddingVertical: 11,
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#60A5FA', fontWeight: '800', fontSize: 12 }}>
+            <Text style={{ color: isDark ? '#60A5FA' : colors.primary, fontWeight: '800', fontSize: 12 }}>
               👤 {isPersian ? 'پروفایل و تنظیمات' : 'My Profile'}
             </Text>
           </TouchableOpacity>
@@ -595,6 +589,7 @@ export default function StudentCatalogScreen() {
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
   const { user, isAdmin, logout } = useAuth();
+  const { colors, isDark } = useTheme();
   const isPersian = i18n.language?.startsWith('fa');
 
   const [selectedCourseForPreview, setSelectedCourseForPreview] = useState<any | null>(null);
@@ -667,9 +662,9 @@ export default function StudentCatalogScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#FACC15" />
-        <Text style={{ color: '#64748B', marginTop: 12, fontSize: 13 }}>Loading learning portal…</Text>
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.gold} />
+        <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 13 }}>Loading learning portal…</Text>
       </View>
     );
   }
@@ -682,9 +677,9 @@ export default function StudentCatalogScreen() {
         {feedbackBanner && (
           <View
             style={{
-              backgroundColor: 'rgba(34,197,94,0.15)',
+              backgroundColor: colors.successBg,
               borderWidth: 1,
-              borderColor: 'rgba(34,197,94,0.4)',
+              borderColor: colors.success,
               borderRadius: 16,
               padding: 14,
               marginBottom: 18,
@@ -693,11 +688,11 @@ export default function StudentCatalogScreen() {
               justifyContent: 'space-between',
             }}
           >
-            <Text style={{ color: '#4ADE80', fontWeight: '800', fontSize: 13, flex: 1 }}>
+            <Text style={{ color: colors.success, fontWeight: '800', fontSize: 13, flex: 1 }}>
               {feedbackBanner}
             </Text>
             <TouchableOpacity onPress={() => setFeedbackBanner(null)}>
-              <Text style={{ color: '#4ADE80', fontWeight: '900', fontSize: 14, marginLeft: 8 }}>✕</Text>
+              <Text style={{ color: colors.success, fontWeight: '900', fontSize: 14, marginLeft: 8 }}>✕</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -723,24 +718,24 @@ export default function StudentCatalogScreen() {
           <View style={{ marginBottom: 28 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <View>
-                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 20 }}>
+                <Text style={{ color: colors.text, fontWeight: '900', fontSize: 20 }}>
                   {isPersian ? 'دوره‌های ثبت‌نام شده من' : 'My Registered Courses'}
                 </Text>
-                <Text style={{ color: '#64748B', fontSize: 12 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
                   {isPersian ? 'دوره‌های فعال شما و ادامه مسیر یادگیری' : 'Your active registered learning tracks'}
                 </Text>
               </View>
               <View
                 style={{
-                  backgroundColor: 'rgba(250,204,21,0.12)',
+                  backgroundColor: colors.goldBg,
                   borderRadius: 10,
                   paddingHorizontal: 10,
                   paddingVertical: 4,
                   borderWidth: 1,
-                  borderColor: 'rgba(250,204,21,0.3)',
+                  borderColor: colors.goldBorder,
                 }}
               >
-                <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 11 }}>
+                <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 11 }}>
                   {enrolledCourses.length} {isPersian ? 'دوره فعال' : 'Registered'}
                 </Text>
               </View>
@@ -761,9 +756,9 @@ export default function StudentCatalogScreen() {
               /* Friendly Empty State for Logged-In User */
               <View
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.03)',
+                  backgroundColor: colors.cardHover,
                   borderWidth: 1,
-                  borderColor: 'rgba(250,204,21,0.2)',
+                  borderColor: colors.cardBorder,
                   borderRadius: 20,
                   padding: 22,
                   alignItems: 'center',
@@ -771,12 +766,12 @@ export default function StudentCatalogScreen() {
                 }}
               >
                 <Text style={{ fontSize: 32, marginBottom: 8 }}>📚</Text>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16, marginBottom: 6 }}>
+                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 6 }}>
                   {isPersian ? 'هنوز در دوره‌ای ثبت‌نام نکرده‌اید' : 'No Registered Courses Yet'}
                 </Text>
                 <Text
                   style={{
-                    color: '#94A3B8',
+                    color: colors.textSecondary,
                     fontSize: 13,
                     textAlign: 'center',
                     maxWidth: 420,
@@ -796,14 +791,14 @@ export default function StudentCatalogScreen() {
         {/* ── Catalog Section Header ── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <View>
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 19 }}>
+            <Text style={{ color: colors.text, fontWeight: '800', fontSize: 19 }}>
               {user
                 ? (enrolledCourses.length > 0
                     ? (isPersian ? 'سایر دوره‌های آموزشی' : 'Explore More Courses')
                     : (isPersian ? 'دوره‌های موجود برای ثبت‌نام' : 'Available Courses to Register'))
                 : (isPersian ? 'دوره‌های آموزشی برتر' : 'Featured Courses')}
             </Text>
-            <Text style={{ color: '#64748B', fontSize: 12 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
               {user
                 ? (isPersian ? 'برای اضافه کردن به پنل خود دکمه ثبت‌نام را لمس کنید' : 'Register to unlock full curriculum and take exams')
                 : (isPersian ? 'سرفصل‌ها را بررسی کرده و ثبت‌نام کنید' : 'Click a course to preview curriculum or enroll')}
@@ -811,15 +806,15 @@ export default function StudentCatalogScreen() {
           </View>
           <View
             style={{
-              backgroundColor: 'rgba(59,130,246,0.12)',
+              backgroundColor: colors.badgeBg,
               borderRadius: 10,
               paddingHorizontal: 10,
               paddingVertical: 4,
               borderWidth: 1,
-              borderColor: 'rgba(59,130,246,0.3)',
+              borderColor: colors.cardBorder,
             }}
           >
-            <Text style={{ color: '#60A5FA', fontWeight: '700', fontSize: 11 }}>
+            <Text style={{ color: colors.badgeText, fontWeight: '700', fontSize: 11 }}>
               {catalogCourses.length} {isPersian ? 'دوره' : 'Courses'}
             </Text>
           </View>
@@ -840,13 +835,13 @@ export default function StudentCatalogScreen() {
               <View
                 style={{
                   marginBottom: 18,
-                  backgroundColor: '#1E293B',
+                  backgroundColor: colors.card,
                   borderRadius: 22,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.08)',
+                  borderColor: colors.cardBorder,
                   overflow: 'hidden',
                   shadowColor: '#000',
-                  shadowOpacity: 0.25,
+                  shadowOpacity: isDark ? 0.25 : 0.05,
                   shadowRadius: 12,
                   elevation: 5,
                 }}
@@ -868,27 +863,27 @@ export default function StudentCatalogScreen() {
                     position: 'absolute',
                     top: 12,
                     left: 12,
-                    backgroundColor: 'rgba(15,23,42,0.85)',
+                    backgroundColor: isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.95)',
                     borderRadius: 10,
                     paddingHorizontal: 8,
                     paddingVertical: 4,
                     borderWidth: 1,
-                    borderColor: 'rgba(250,204,21,0.4)',
+                    borderColor: colors.goldBorder,
                   }}
                 >
-                  <Text style={{ color: '#FACC15', fontSize: 10, fontWeight: '800' }}>
+                  <Text style={{ color: colors.gold, fontSize: 10, fontWeight: '800' }}>
                     ✅ VERIFIED CERTIFICATION
                   </Text>
                 </View>
 
                 <View style={{ padding: 18 }}>
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 17, marginBottom: 6, lineHeight: 24 }}>
+                  <Text style={{ color: colors.text, fontWeight: '800', fontSize: 17, marginBottom: 6, lineHeight: 24 }}>
                     {title}
                   </Text>
-                  <Text style={{ color: '#FACC15', fontSize: 11, fontWeight: '700', marginBottom: 8 }}>
+                  <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '700', marginBottom: 8 }}>
                     Pass {(item as any).passPercentage}% • {(item as any).exam?.questionCount || 10} Qs • {(item as any).exam?.timeLimitMin || 20} min exam
                   </Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 13, lineHeight: 20, marginBottom: 14 }} numberOfLines={2}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, marginBottom: 14 }} numberOfLines={2}>
                     {desc}
                   </Text>
 
@@ -896,23 +891,23 @@ export default function StudentCatalogScreen() {
                   {(item as any).sampleLessons && (item as any).sampleLessons.length > 0 && (
                     <View
                       style={{
-                        backgroundColor: 'rgba(255,255,255,0.04)',
+                        backgroundColor: colors.cardHover,
                         borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: 'rgba(255,255,255,0.07)',
+                        borderColor: colors.cardBorder,
                         padding: 12,
                         marginBottom: 14,
                       }}
                     >
-                      <Text style={{ color: '#FACC15', fontSize: 10, fontWeight: '800', marginBottom: 8, letterSpacing: 1 }}>
+                      <Text style={{ color: colors.gold, fontSize: 10, fontWeight: '800', marginBottom: 8, letterSpacing: 1 }}>
                         {isPersian ? 'نمونه سرفصل‌های دوره:' : 'CURRICULUM MODULES:'}
                       </Text>
                       {(item as any).sampleLessons.slice(0, 2).map((lesson: any, i: number) => (
                         <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
-                          <Text style={{ color: '#CBD5E1', fontSize: 12, flex: 1, marginRight: 8 }} numberOfLines={1}>
+                          <Text style={{ color: colors.text, fontSize: 12, flex: 1, marginRight: 8 }} numberOfLines={1}>
                             • {lesson.title}
                           </Text>
-                          <Text style={{ color: '#475569', fontSize: 11 }}>{lesson.duration}</Text>
+                          <Text style={{ color: colors.textMuted, fontSize: 11 }}>{lesson.duration}</Text>
                         </View>
                       ))}
                     </View>
@@ -923,15 +918,15 @@ export default function StudentCatalogScreen() {
                       onPress={() => setSelectedCourseForPreview(item)}
                       style={{
                         flex: 1,
-                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        backgroundColor: colors.cardHover,
                         borderWidth: 1,
-                        borderColor: 'rgba(250,204,21,0.3)',
+                        borderColor: colors.cardBorder,
                         borderRadius: 12,
                         paddingVertical: 11,
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: '#FACC15', fontWeight: '700', fontSize: 12 }}>
+                      <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12 }}>
                         📋 {isPersian ? 'نمایش سرفصل‌ها' : 'Preview'}
                       </Text>
                     </TouchableOpacity>
@@ -947,7 +942,7 @@ export default function StudentCatalogScreen() {
                         }}
                         style={{
                           flex: 1.2,
-                          backgroundColor: '#2563EB',
+                          backgroundColor: colors.primary,
                           borderRadius: 12,
                           paddingVertical: 11,
                           alignItems: 'center',
@@ -970,7 +965,7 @@ export default function StudentCatalogScreen() {
                         onPress={() => router.push('/(auth)/login')}
                         style={{
                           flex: 1.2,
-                          backgroundColor: '#3B82F6',
+                          backgroundColor: colors.primary,
                           borderRadius: 12,
                           paddingVertical: 11,
                           alignItems: 'center',
@@ -989,9 +984,9 @@ export default function StudentCatalogScreen() {
           ListEmptyComponent={
             <View
               style={{
-                backgroundColor: 'rgba(255,255,255,0.03)',
+                backgroundColor: colors.cardHover,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.08)',
+                borderColor: colors.cardBorder,
                 borderRadius: 20,
                 padding: 32,
                 alignItems: 'center',
@@ -999,10 +994,10 @@ export default function StudentCatalogScreen() {
               }}
             >
               <Text style={{ fontSize: 36, marginBottom: 10 }}>🎓</Text>
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16, marginBottom: 6 }}>
+              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 6 }}>
                 {isPersian ? 'دوره‌ای یافت نشد' : 'No Courses Available'}
               </Text>
-              <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
                 {isPersian
                   ? 'دوره‌های جدید به زودی در این بخش منتشر خواهند شد.'
                   : 'New courses will be published here soon.'}
@@ -1015,19 +1010,19 @@ export default function StudentCatalogScreen() {
         {!user && (
           <View
             style={{
-              backgroundColor: 'rgba(250,204,21,0.06)',
+              backgroundColor: colors.goldBg,
               borderWidth: 1,
-              borderColor: 'rgba(250,204,21,0.2)',
+              borderColor: colors.goldBorder,
               borderRadius: 20,
               padding: 24,
               alignItems: 'center',
               marginBottom: 16,
             }}
           >
-            <Text style={{ color: '#FACC15', fontWeight: '900', fontSize: 18, marginBottom: 8 }}>
+            <Text style={{ color: colors.gold, fontWeight: '900', fontSize: 18, marginBottom: 8 }}>
               {isPersian ? 'آماده یادگیری و پیشرفت هستید؟' : 'Ready to level up your career?'}
             </Text>
-            <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
               {isPersian
                 ? 'با ساخت حساب کاربری رایگان، به پنل اختصاصی دوره‌ها، ذخیره پیشرفت و گواهینامه‌های رسمی دسترسی پیدا کنید.'
                 : 'Create a free account to track your progress, earn verified certificates, and access your custom dashboard.'}
@@ -1035,7 +1030,7 @@ export default function StudentCatalogScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(auth)/register')}
               style={{
-                backgroundColor: '#FACC15',
+                backgroundColor: colors.gold,
                 paddingHorizontal: 32,
                 paddingVertical: 14,
                 borderRadius: 14,
@@ -1043,7 +1038,7 @@ export default function StudentCatalogScreen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 14 }}>
+              <Text style={{ color: isDark ? '#0F172A' : '#FFFFFF', fontWeight: '900', fontSize: 14 }}>
                 🚀 {isPersian ? 'ثبت‌نام رایگان' : 'Get Started for Free'}
               </Text>
             </TouchableOpacity>
@@ -1051,7 +1046,7 @@ export default function StudentCatalogScreen() {
               onPress={() => router.push('/(auth)/login')}
               style={{ marginTop: 10, padding: 8 }}
             >
-              <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}>
                 {isPersian ? 'قبلاً ثبت‌نام کرده‌اید؟ ورود به حساب →' : 'Already have an account? Sign in →'}
               </Text>
             </TouchableOpacity>
@@ -1062,12 +1057,12 @@ export default function StudentCatalogScreen() {
       {/* ── Course Preview Curriculum Modal ── */}
       {selectedCourseForPreview && (
         <Modal transparent animationType="fade" visible={!!selectedCourseForPreview}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
             <View
               style={{
-                backgroundColor: '#1E293B',
+                backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: 'rgba(250,204,21,0.4)',
+                borderColor: isDark ? 'rgba(250,204,21,0.4)' : colors.cardBorder,
                 borderRadius: 24,
                 padding: 24,
                 width: '100%',
@@ -1075,29 +1070,29 @@ export default function StudentCatalogScreen() {
                 maxHeight: '85%',
               }}
             >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}>
                 <View style={{ flex: 1, marginRight: 12 }}>
-                  <View style={{ backgroundColor: 'rgba(250,204,21,0.12)', borderWidth: 1, borderColor: 'rgba(250,204,21,0.35)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6 }}>
-                    <Text style={{ color: '#FACC15', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>CURRICULUM PREVIEW</Text>
+                  <View style={{ backgroundColor: colors.goldBg, borderWidth: 1, borderColor: colors.goldBorder, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6 }}>
+                    <Text style={{ color: colors.gold, fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>CURRICULUM PREVIEW</Text>
                   </View>
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16, lineHeight: 22 }}>
+                  <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, lineHeight: 22 }}>
                     {isPersian && selectedCourseForPreview.faTitle ? selectedCourseForPreview.faTitle : selectedCourseForPreview.title}
                   </Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setSelectedCourseForPreview(null)}
-                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', padding: 8, borderRadius: 99 }}
+                  style={{ backgroundColor: colors.cardHover, borderWidth: 1, borderColor: colors.cardBorder, padding: 8, borderRadius: 99 }}
                 >
-                  <Text style={{ color: '#94A3B8', fontWeight: '800', fontSize: 14 }}>✕</Text>
+                  <Text style={{ color: colors.textSecondary, fontWeight: '800', fontSize: 14 }}>✕</Text>
                 </TouchableOpacity>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                <Text style={{ color: '#94A3B8', fontSize: 13, lineHeight: 20, marginBottom: 16 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, marginBottom: 16 }}>
                   {isPersian && selectedCourseForPreview.faDescription ? selectedCourseForPreview.faDescription : selectedCourseForPreview.description}
                 </Text>
 
-                <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 13, marginBottom: 12 }}>
+                <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 13, marginBottom: 12 }}>
                   {isPersian ? 'سرفصل‌های آموزشی و مباحث دوره:' : 'Course Lessons & Modules:'}
                 </Text>
 
@@ -1106,45 +1101,45 @@ export default function StudentCatalogScreen() {
                     <View
                       key={idx}
                       style={{
-                        backgroundColor: 'rgba(255,255,255,0.04)',
+                        backgroundColor: colors.cardHover,
                         padding: 14,
                         borderRadius: 14,
                         borderWidth: 1,
-                        borderColor: 'rgba(255,255,255,0.07)',
+                        borderColor: colors.cardBorder,
                         marginBottom: 8,
                       }}
                     >
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, flex: 1, marginRight: 8 }}>{lesson.title}</Text>
-                        <Text style={{ color: '#FACC15', fontSize: 11, fontWeight: '700' }}>{lesson.duration}</Text>
+                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, flex: 1, marginRight: 8 }}>{lesson.title}</Text>
+                        <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '700' }}>{lesson.duration}</Text>
                       </View>
-                      <Text style={{ color: '#64748B', fontSize: 12 }}>{lesson.description}</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>{lesson.description}</Text>
                     </View>
                   ))
                 ) : (
                   <View
                     style={{
-                      backgroundColor: 'rgba(255,255,255,0.04)',
+                      backgroundColor: colors.cardHover,
                       padding: 14,
                       borderRadius: 14,
                       borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.07)',
+                      borderColor: colors.cardBorder,
                       marginBottom: 8,
                     }}
                   >
-                    <Text style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 22 }}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 22 }}>
                       {selectedCourseForPreview.body || selectedCourseForPreview.description || (isPersian ? 'محتوای آموزشی به زودی بارگذاری می‌شود.' : 'Course content will be uploaded soon.')}
                     </Text>
                   </View>
                 )}
               </ScrollView>
 
-              <View style={{ flexDirection: 'row', gap: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)', paddingTop: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 10, borderTopWidth: 1, borderTopColor: colors.cardBorder, paddingTop: 16 }}>
                 <TouchableOpacity
                   onPress={() => setSelectedCourseForPreview(null)}
-                  style={{ flex: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
+                  style={{ flex: 1, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
                 >
-                  <Text style={{ color: '#94A3B8', fontWeight: '600', fontSize: 13 }}>{isPersian ? 'بستن' : 'Close'}</Text>
+                  <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 13 }}>{isPersian ? 'بستن' : 'Close'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1160,7 +1155,7 @@ export default function StudentCatalogScreen() {
                     }
                     router.push(`/(student)/course/${id}` as any);
                   }}
-                  style={{ flex: 2, backgroundColor: '#3B82F6', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
+                  style={{ flex: 2, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
                 >
                   <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>
                     {user

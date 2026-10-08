@@ -5,11 +5,13 @@ import { View, ActivityIndicator } from 'react-native';
 import { queryClient } from '../src/lib/queryClient';
 import { useAuth } from '../src/features/auth/useAuth';
 import { usePresence } from '../src/hooks/usePresence';
+import { ThemeProvider, useTheme } from '../src/features/theme/ThemeContext';
 import '../src/lib/i18n';
 import '../global.css';
 
 function RootLayoutNav() {
   const { user, isAdmin, loading } = useAuth();
+  const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
 
@@ -29,14 +31,14 @@ function RootLayoutNav() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0F172A' } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(student)" />
       <Stack.Screen name="admin" />
@@ -45,8 +47,8 @@ function RootLayoutNav() {
         options={{
           title: 'Verify Certificate',
           headerShown: true,
-          headerStyle: { backgroundColor: '#1E293B' },
-          headerTintColor: '#FFF',
+          headerStyle: { backgroundColor: colors.surface },
+          headerTintColor: colors.text,
         }}
       />
     </Stack>
@@ -56,7 +58,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RootLayoutNav />
+      <ThemeProvider>
+        <RootLayoutNav />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

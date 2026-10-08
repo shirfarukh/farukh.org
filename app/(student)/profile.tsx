@@ -9,12 +9,15 @@ import { Input } from '../../src/components/ui/Input';
 import { Badge } from '../../src/components/ui/Badge';
 import { useAuth } from '../../src/features/auth/useAuth';
 import { useAuthStore } from '../../src/features/auth/authStore';
+import { useTheme } from '../../src/features/theme/ThemeContext';
+import { ThemeToggle } from '../../src/components/ui/ThemeToggle';
 import { doc, setDoc } from '@firebase/firestore';
 import { db } from '../../src/lib/firebase';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isAdmin, logout } = useAuth();
+  const { colors, isDark } = useTheme();
   const setUser = useAuthStore((s) => s.setUser);
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [loading, setLoading] = useState(false);
@@ -49,17 +52,26 @@ export default function ProfileScreen() {
     <ScreenWrapper>
       <View className="max-w-md w-full self-center py-6">
         <View className="flex-row justify-between items-center mb-6">
-          <Text className="text-2xl font-bold text-white">Profile Settings</Text>
+          <Text style={{ color: colors.text }} className="text-2xl font-bold">Profile Settings</Text>
           <Badge label={isAdmin ? 'ADMIN' : 'STUDENT'} variant={isAdmin ? 'warning' : 'info'} />
         </View>
 
         {message ? (
-          <View className="bg-emerald-950/60 border border-emerald-800 p-3.5 rounded-xl mb-4">
-            <Text className="text-emerald-300 text-sm font-medium">{message}</Text>
+          <View
+            style={{
+              backgroundColor: colors.successBg,
+              borderColor: colors.success,
+              borderWidth: 1,
+              padding: 14,
+              borderRadius: 14,
+              marginBottom: 16,
+            }}
+          >
+            <Text style={{ color: colors.success, fontSize: 13, fontWeight: '600' }}>{message}</Text>
           </View>
         ) : null}
 
-        <Card className="mb-6 border-surface-border">
+        <Card>
           <Input
             label="Email Address (Read-only)"
             value={user?.email || ''}
@@ -72,6 +84,30 @@ export default function ProfileScreen() {
             onChangeText={setDisplayName}
             placeholder="Your Name"
           />
+
+          {/* Appearance / Theme setting row */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 12,
+              borderTopWidth: 1,
+              borderTopColor: colors.cardBorder,
+              marginTop: 4,
+              marginBottom: 16,
+            }}
+          >
+            <View>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
+                Appearance / ظاهر
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                {isDark ? 'Dark Theme (فعال)' : 'Light Theme (فعال)'}
+              </Text>
+            </View>
+            <ThemeToggle showLabel />
+          </View>
 
           <Button
             title="Update Profile"

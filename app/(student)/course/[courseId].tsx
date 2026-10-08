@@ -9,6 +9,7 @@ import { Badge } from '../../../src/components/ui/Badge';
 import { ProgressBar } from '../../../src/components/ProgressBar';
 import { LessonVideo } from '../../../src/components/LessonVideo';
 import { useAuth } from '../../../src/features/auth/useAuth';
+import { useTheme } from '../../../src/features/theme/ThemeContext';
 import {
   getCourseDetail,
   getCourseProgress,
@@ -20,6 +21,7 @@ export default function StudentCourseDetailScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
 
   const { data: course } = useQuery({
@@ -59,8 +61,8 @@ export default function StudentCourseDetailScreen() {
 
   if (!course) {
     return (
-      <View className="flex-1 bg-surface-dark justify-center items-center">
-        <ActivityIndicator size="large" color="#3B82F6" />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.gold} />
       </View>
     );
   }
@@ -75,30 +77,40 @@ export default function StudentCourseDetailScreen() {
     <ScreenWrapper>
       <View className="max-w-4xl w-full self-center">
         {/* Header Banner */}
-        <Card className="mb-6 border-brand-500">
-          <Text className="text-2xl font-bold text-white mb-2">{course.title}</Text>
-          <Text className="text-slate-300 text-sm mb-3 leading-6">{course.body || course.description}</Text>
+        <Card>
+          <Text style={{ color: colors.text }} className="text-2xl font-bold mb-2">{course.title}</Text>
+          <Text style={{ color: colors.textSecondary }} className="text-sm mb-3 leading-6">{course.body || course.description}</Text>
 
           {course.keywords && course.keywords.length > 0 && (
             <View className="flex-row flex-wrap gap-1.5 mb-4">
               {course.keywords.map((kw, i) => (
-                <View key={i} className="bg-brand-950/80 border border-brand-800/60 px-2.5 py-0.5 rounded-full">
-                  <Text className="text-brand-300 text-xs">#{kw}</Text>
+                <View
+                  key={i}
+                  style={{
+                    backgroundColor: colors.badgeBg,
+                    borderWidth: 1,
+                    borderColor: colors.cardBorder,
+                    paddingHorizontal: 10,
+                    paddingVertical: 2,
+                    borderRadius: 99,
+                  }}
+                >
+                  <Text style={{ color: colors.badgeText }} className="text-xs font-semibold">#{kw}</Text>
                 </View>
               ))}
             </View>
           )}
 
           {course.youtubeVideoId && (
-            <View className="mb-4 rounded-2xl overflow-hidden border border-surface-border">
+            <View style={{ borderColor: colors.cardBorder }} className="mb-4 rounded-2xl overflow-hidden border">
               <LessonVideo videoId={course.youtubeVideoId} />
             </View>
           )}
 
           <ProgressBar progress={progressPercent} />
 
-          <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-surface-border">
-            <Text className="text-xs text-slate-400">
+          <View style={{ borderTopWidth: 1, borderTopColor: colors.cardBorder }} className="flex-row justify-between items-center mt-3 pt-3">
+            <Text style={{ color: colors.textSecondary }} className="text-xs">
               {completedCount} of {publishedLessons.length} lessons completed
             </Text>
             {allLessonsCompleted ? (
@@ -119,21 +131,20 @@ export default function StudentCourseDetailScreen() {
         </Card>
 
         {/* Modules & Lessons Outline */}
-        <Text className="text-xl font-bold text-white mb-3">Course Curriculum</Text>
+        <Text style={{ color: colors.text }} className="text-xl font-bold mb-3">Course Curriculum</Text>
 
         {modules.map((m) => {
           const moduleLessons = publishedLessons.filter((l) => l.moduleId === m.id);
 
           return (
-            <Card key={m.id} className="mb-4">
-              <Text className="text-lg font-bold text-brand-400 mb-3">{m.title}</Text>
+            <Card key={m.id}>
+              <Text style={{ color: colors.gold }} className="text-lg font-bold mb-3">{m.title}</Text>
 
-              {moduleLessons.map((les, index) => {
+              {moduleLessons.map((les) => {
                 const lessonProg = progress[les.id!];
                 const isCompleted = lessonProg?.completed || false;
 
                 // Sequential Unlock Logic:
-                // Global Lesson 0 is unlocked. Lesson N is unlocked if Lesson N-1 in publishedLessons is completed.
                 const globalIndex = publishedLessons.findIndex((l) => l.id === les.id);
                 let isUnlocked = globalIndex === 0;
                 if (globalIndex > 0) {
@@ -146,24 +157,37 @@ export default function StudentCourseDetailScreen() {
                     key={les.id}
                     disabled={!isUnlocked}
                     onPress={() => router.push(`/(student)/lesson/${courseId}/${les.id}` as any)}
-                    className={`p-3.5 rounded-xl mb-2.5 flex-row justify-between items-center border ${
-                      isCompleted
-                        ? 'bg-emerald-950/30 border-emerald-800/60'
+                    style={{
+                      backgroundColor: isCompleted
+                        ? colors.successBg
                         : isUnlocked
-                        ? 'bg-slate-800 border-surface-border'
-                        : 'bg-slate-900/60 border-slate-800 opacity-60'
-                    }`}
+                        ? colors.cardHover
+                        : isDark ? 'rgba(15,23,42,0.4)' : '#F1F5F9',
+                      borderColor: isCompleted
+                        ? colors.success
+                        : colors.cardBorder,
+                      borderWidth: 1,
+                      padding: 14,
+                      borderRadius: 14,
+                      marginBottom: 10,
+                      opacity: isUnlocked ? 1 : 0.6,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
                   >
                     <View className="flex-1 mr-3">
                       <Text
-                        className={`font-semibold text-base ${
-                          isUnlocked ? 'text-white' : 'text-slate-500'
-                        }`}
+                        style={{
+                          color: isUnlocked ? colors.text : colors.textMuted,
+                          fontWeight: '600',
+                          fontSize: 15,
+                        }}
                       >
                         {les.order}. {les.title}
                       </Text>
                       {lessonProg?.quizScore ? (
-                        <Text className="text-xs text-emerald-400 mt-0.5">
+                        <Text style={{ color: colors.success }} className="text-xs mt-0.5 font-bold">
                           Best Score: {lessonProg.quizScore}%
                         </Text>
                       ) : null}

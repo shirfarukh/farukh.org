@@ -132,7 +132,7 @@ function EnrolledCourseCard({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 }}>
           <Image
             source={{ uri: item.coverUrl }}
-            style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: colors.bg }}
+            style={{ width: 100, height: 80, borderRadius: 14, backgroundColor: colors.bg, aspectRatio: 5 / 4 }}
             resizeMode="cover"
           />
           <View style={{ flex: 1 }}>
@@ -178,6 +178,15 @@ function EnrolledCourseCard({
             <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, lineHeight: 22 }}>
               {title}
             </Text>
+            {item.keywords && item.keywords.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                {item.keywords.slice(0, 3).map((kw: string, i: number) => (
+                  <Text key={i} style={{ color: colors.gold, fontSize: 10, fontWeight: '600' }}>
+                    #{kw}
+                  </Text>
+                ))}
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>

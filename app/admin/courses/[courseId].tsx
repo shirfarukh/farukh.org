@@ -304,11 +304,11 @@ export default function AdminCourseEditScreen() {
         {/* Course Header Banner */}
         <Card className="mb-6 border-brand-500/60 bg-surface-card p-5">
           <View className="flex-row justify-between items-start mb-3">
-            <View className="flex-row gap-3 flex-1 mr-3 items-start">
+            <View className="flex-row gap-4 flex-1 mr-3 items-start">
               {course.coverUrl ? (
                 <Image
                   source={{ uri: course.coverUrl }}
-                  style={{ width: 84, height: 84, borderRadius: 14, backgroundColor: '#1E293B' }}
+                  style={{ width: 120, height: 96, borderRadius: 14, backgroundColor: '#1E293B', aspectRatio: 5 / 4 }}
                   resizeMode="cover"
                 />
               ) : null}
@@ -322,7 +322,18 @@ export default function AdminCourseEditScreen() {
                   )}
                   <Badge label={course.status?.toUpperCase() || 'PUBLISHED'} variant="success" />
                 </View>
-                <Text className="text-slate-300 text-sm mt-1">{course.body || course.description}</Text>
+                <Text className="text-slate-300 text-sm mt-1 mb-2">{course.body || course.description}</Text>
+
+                {/* Keywords positioned next to the thumbnail */}
+                {course.keywords && course.keywords.length > 0 && (
+                  <View className="flex-row flex-wrap gap-1.5 items-center mt-1">
+                    {course.keywords.map((kw, i) => (
+                      <View key={i} className="bg-brand-950/80 border border-brand-800/60 px-2.5 py-0.5 rounded-full">
+                        <Text className="text-brand-300 text-xs">#{kw}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
 
@@ -333,23 +344,14 @@ export default function AdminCourseEditScreen() {
             />
           </View>
 
-          {/* Keywords & YouTube Preview Badges */}
-          <View className="flex-row flex-wrap gap-2 items-center pt-2 border-t border-surface-border">
-            {course.youtubeVideoId && (
+          {/* YouTube Preview Badge if present */}
+          {course.youtubeVideoId && (
+            <View className="flex-row flex-wrap gap-2 items-center pt-2 border-t border-surface-border">
               <View className="flex-row items-center gap-1.5 bg-red-950/60 border border-red-800/80 px-2.5 py-1 rounded-lg">
                 <Text className="text-red-300 text-xs font-semibold">📺 YouTube: {course.youtubeVideoId}</Text>
               </View>
-            )}
-            {course.keywords && course.keywords.length > 0 && (
-              <View className="flex-row flex-wrap gap-1.5 items-center">
-                {course.keywords.map((kw, i) => (
-                  <View key={i} className="bg-brand-950/80 border border-brand-800/60 px-2.5 py-0.5 rounded-full">
-                    <Text className="text-brand-300 text-xs">#{kw}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
+            </View>
+          )}
 
           {saveCourseSuccess && (
             <View className="mt-3 p-2.5 bg-emerald-950/60 border border-emerald-500/60 rounded-xl">

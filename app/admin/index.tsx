@@ -380,14 +380,30 @@ export default function AdminDashboardScreen() {
                 onPress={() => router.push(`/admin/courses/${item.id}` as any)}
                 className="mb-4 border-surface-border bg-surface-card hover:bg-surface-hover p-5"
               >
-                <View className="flex-row gap-3 items-start mb-2">
+                <View className="flex-row gap-4 items-start mb-2">
                   {item.coverUrl ? (
                     <Image
                       source={{ uri: item.coverUrl }}
-                      style={{ width: 72, height: 72, borderRadius: 12, backgroundColor: '#1E293B' }}
+                      style={{ width: 115, height: 92, borderRadius: 12, backgroundColor: '#1E293B', aspectRatio: 5 / 4 }}
                       resizeMode="cover"
                     />
-                  ) : null}
+                  ) : (
+                    <View
+                      style={{
+                        width: 115,
+                        height: 92,
+                        borderRadius: 12,
+                        backgroundColor: '#1E293B',
+                        borderWidth: 1,
+                        borderColor: '#334155',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        aspectRatio: 5 / 4,
+                      }}
+                    >
+                      <Text style={{ fontSize: 26 }}>📚</Text>
+                    </View>
+                  )}
                   <View className="flex-1">
                     <View className="flex-row justify-between items-start mb-1">
                       <View className="flex-1 mr-2">
@@ -416,18 +432,19 @@ export default function AdminDashboardScreen() {
                     <Text className="text-slate-300 text-sm mb-2" numberOfLines={2}>
                       {item.body ? item.body : (isPersian && item.faDescription ? item.faDescription : item.description)}
                     </Text>
+
+                    {/* Keywords positioned next to the thumbnail */}
+                    {item.keywords && item.keywords.length > 0 && (
+                      <View className="flex-row flex-wrap gap-1.5 mt-1 mb-1">
+                        {item.keywords.map((kw, i) => (
+                          <Text key={i} className="text-brand-300 text-[10px] bg-brand-950/80 border border-brand-800/60 px-2 py-0.5 rounded-md font-medium">
+                            #{kw}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 </View>
-
-                {item.keywords && item.keywords.length > 0 && (
-                  <View className="flex-row flex-wrap gap-1.5 mb-3">
-                    {item.keywords.map((kw, i) => (
-                      <Text key={i} className="text-brand-300 text-[10px] bg-brand-950/80 border border-brand-800/60 px-2 py-0.5 rounded-md font-medium">
-                        #{kw}
-                      </Text>
-                    ))}
-                  </View>
-                )}
 
                 <View className="flex-row justify-between items-center border-t border-surface-border/60 pt-3">
                   <Text className="text-xs text-gold-400 font-semibold">

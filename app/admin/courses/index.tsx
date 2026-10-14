@@ -211,14 +211,30 @@ export default function AdminCoursesListScreen() {
           }
           renderItem={({ item }) => (
             <Card onPress={() => router.push(`/admin/courses/${item.id}` as any)} className="mb-4">
-              <View className="flex-row gap-3 items-start">
+              <View className="flex-row gap-4 items-start mb-2">
                 {item.coverUrl ? (
                   <Image
                     source={{ uri: item.coverUrl }}
-                    style={{ width: 70, height: 70, borderRadius: 12, backgroundColor: '#1E293B' }}
+                    style={{ width: 115, height: 92, borderRadius: 12, backgroundColor: '#1E293B', aspectRatio: 5 / 4 }}
                     resizeMode="cover"
                   />
-                ) : null}
+                ) : (
+                  <View
+                    style={{
+                      width: 115,
+                      height: 92,
+                      borderRadius: 12,
+                      backgroundColor: '#1E293B',
+                      borderWidth: 1,
+                      borderColor: '#334155',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      aspectRatio: 5 / 4,
+                    }}
+                  >
+                    <Text style={{ fontSize: 26 }}>📚</Text>
+                  </View>
+                )}
                 <View className="flex-1">
                   <View className="flex-row justify-between items-start mb-1">
                     <Text className="text-lg font-bold text-white flex-1 mr-2">{item.title}</Text>
@@ -235,18 +251,19 @@ export default function AdminCoursesListScreen() {
                   <Text className="text-slate-400 text-sm mb-2" numberOfLines={2}>
                     {item.body || item.description}
                   </Text>
+
+                  {/* Keywords positioned next to the thumbnail */}
+                  {item.keywords && item.keywords.length > 0 && (
+                    <View className="flex-row flex-wrap gap-1.5 mt-1 mb-1">
+                      {item.keywords.map((kw, idx) => (
+                        <Text key={idx} className="text-brand-300 text-[10px] bg-brand-950/80 border border-brand-800/60 px-2 py-0.5 rounded-md font-medium">
+                          #{kw}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
                 </View>
               </View>
-
-              {item.keywords && item.keywords.length > 0 && (
-                <View className="flex-row flex-wrap gap-1.5 mb-2 mt-2">
-                  {item.keywords.map((kw, idx) => (
-                    <Text key={idx} className="text-brand-300 text-[10px] bg-brand-950/80 border border-brand-800/60 px-2 py-0.5 rounded-md font-medium">
-                      #{kw}
-                    </Text>
-                  ))}
-                </View>
-              )}
               <View className="flex-row justify-between items-center border-t border-surface-border pt-3">
                 <Text className="text-xs text-slate-400">Lessons: {item.lessonCount || 0}</Text>
                 <Text className="text-xs text-brand-400 font-semibold">Edit Content & Settings →</Text>

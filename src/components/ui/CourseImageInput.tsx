@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { storage } from '../../lib/firebase';
 import { useTheme } from '../../features/theme/ThemeContext';
 
@@ -9,6 +11,59 @@ interface CourseImageInputProps {
   onChangeImage: (url: string) => void;
   label?: string;
 }
+
+// Client-side image optimizer for Web to avoid Firestore document size limits & provide instant rendering
+const readAndOptimizeWebImage = (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (!result) {
+        resolve('');
+        return;
+      }
+      // If smaller than 200KB, use directly
+      if (file.size < 200 * 1024) {
+        resolve(result);
+        return;
+      }
+      try {
+        const img = new (window as any).Image();
+        img.onload = () => {
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimized = canvas.toDataURL('image/jpeg', 0.85);
+            resolve(optimized);
+            return;
+          }
+          resolve(result);
+        };
+        img.onerror = () => resolve(result);
+        img.src = result;
+      } catch {
+        resolve(result);
+      }
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+};
 
 export const CourseImageInput: React.FC<CourseImageInputProps> = ({
   value,
@@ -20,7 +75,9 @@ export const CourseImageInput: React.FC<CourseImageInputProps> = ({
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
 
-  const handlePickFile = () => {
+  const handlePickFile = async () => {
+    setImageLoadError(false);
+
     if (Platform.OS === 'web') {
       const input = document.createElement('input');
       input.type = 'file';
@@ -30,44 +87,102 @@ export const CourseImageInput: React.FC<CourseImageInputProps> = ({
         if (!file) return;
 
         setIsUploading(true);
-        setUploadMessage('Uploading image to Firebase Storage...');
-        setImageLoadError(false);
+        setUploadMessage('Processing image...');
 
         try {
-          const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-          const fileRef = storageRef(storage, `covers/${Date.now()}_${cleanName}`);
-          
-          await uploadBytes(fileRef, file);
-          const downloadUrl = await getDownloadURL(fileRef);
-          
-          onChangeImage(downloadUrl);
-          setUploadMessage('✓ Uploaded successfully to Firebase Storage!');
-          setTimeout(() => setUploadMessage(null), 4000);
-        } catch (storageErr) {
-          console.warn('Direct Firebase Storage upload failed, converting to local data URI fallback:', storageErr);
-          // Fallback to FileReader Data URL so upload never fails for the user
-          try {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const dataUrl = reader.result as string;
-              onChangeImage(dataUrl);
-              setUploadMessage('✓ Image loaded successfully!');
-              setTimeout(() => setUploadMessage(null), 4000);
-            };
-            reader.readAsDataURL(file);
-          } catch (readerErr) {
-            console.error('FileReader fallback failed:', readerErr);
-            setUploadMessage('Failed to process image file.');
-            setTimeout(() => setUploadMessage(null), 4000);
+          // 1. Read and optimize image locally first for INSTANT preview & fallback
+          const localDataUrl = await readAndOptimizeWebImage(file);
+          if (localDataUrl) {
+            onChangeImage(localDataUrl);
           }
+
+          // 2. Attempt background upload to Firebase Storage with strict 4s timeout
+          setUploadMessage('Syncing image...');
+          const cleanName = (file.name || 'cover.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+          const fileRef = storageRef(storage, `covers/${Date.now()}_${cleanName}`);
+
+          const uploadPromise = uploadBytes(fileRef, file);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Storage upload timeout')), 4000)
+          );
+
+          try {
+            await Promise.race([uploadPromise, timeoutPromise]);
+            const downloadUrl = await getDownloadURL(fileRef);
+            onChangeImage(downloadUrl);
+            setUploadMessage('✓ Uploaded to Cloud Storage!');
+          } catch (cloudErr) {
+            // If cloud storage is not yet provisioned or network takes too long, local optimized image is already saved!
+            console.log('Using optimized local image (Cloud storage unavailable or timed out):', cloudErr);
+            setUploadMessage('✓ Image ready & applied!');
+          }
+        } catch (err: any) {
+          console.error('Failed to load image:', err);
+          setUploadMessage('⚠️ Failed to load image. Please try pasting a direct image link.');
         } finally {
           setIsUploading(false);
+          setTimeout(() => setUploadMessage(null), 4000);
         }
       };
       input.click();
     } else {
-      setUploadMessage('File upload dialog is available on web. On mobile, please enter an image URL.');
-      setTimeout(() => setUploadMessage(null), 4000);
+      // Native Mobile (Expo Go on iOS/Android)
+      try {
+        setIsUploading(true);
+        setUploadMessage('Selecting image...');
+
+        const result = await DocumentPicker.getDocumentAsync({
+          type: ['image/*'],
+          copyToCacheDirectory: true,
+        });
+
+        if (result.canceled || !result.assets || result.assets.length === 0) {
+          setIsUploading(false);
+          setUploadMessage(null);
+          return;
+        }
+
+        const asset = result.assets[0];
+        setUploadMessage('Loading image...');
+
+        // Read base64
+        const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        const mime = asset.mimeType || 'image/jpeg';
+        const dataUrl = `data:${mime};base64,${base64}`;
+
+        // Immediately apply image
+        onChangeImage(dataUrl);
+
+        // Attempt Firebase Storage upload in background if possible
+        try {
+          const cleanName = (asset.name || 'cover.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+          const fileRef = storageRef(storage, `covers/${Date.now()}_${cleanName}`);
+          
+          const response = await fetch(asset.uri);
+          const blob = await response.blob();
+
+          const uploadPromise = uploadBytes(fileRef, blob);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Storage upload timeout')), 4000)
+          );
+
+          await Promise.race([uploadPromise, timeoutPromise]);
+          const downloadUrl = await getDownloadURL(fileRef);
+          onChangeImage(downloadUrl);
+          setUploadMessage('✓ Uploaded to Cloud Storage!');
+        } catch {
+          setUploadMessage('✓ Image ready & applied!');
+        }
+      } catch (err: any) {
+        console.error('Mobile image pick error:', err);
+        setUploadMessage('⚠️ Could not open file selector.');
+      } finally {
+        setIsUploading(false);
+        setTimeout(() => setUploadMessage(null), 4000);
+      }
     }
   };
 
@@ -97,6 +212,7 @@ export const CourseImageInput: React.FC<CourseImageInputProps> = ({
               paddingVertical: 11,
               borderRadius: 12,
               gap: 8,
+              opacity: isUploading ? 0.7 : 1,
             }}
           >
             {isUploading ? (
@@ -105,7 +221,7 @@ export const CourseImageInput: React.FC<CourseImageInputProps> = ({
               <Text style={{ fontSize: 15 }}>📤</Text>
             )}
             <Text style={{ color: '#3B82F6', fontWeight: '700', fontSize: 13 }}>
-              {isUploading ? 'Uploading...' : 'Upload Image File'}
+              {isUploading ? 'Processing...' : 'Upload Image File'}
             </Text>
           </TouchableOpacity>
 

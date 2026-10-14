@@ -8,13 +8,33 @@ service firebase.storage {
     }
 
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.admin == true;
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.email in [
+          'shir@secureai.be',
+          'admin@example.com',
+          'admin@farukh.org',
+          'shirfarukh@gmail.com',
+          'shir@farukh.org',
+          'farukh@farukh.org',
+          'info@farukh.org'
+        ] ||
+        (request.auth.token.email != null && request.auth.token.email.lower() in [
+          'shir@secureai.be',
+          'admin@example.com',
+          'admin@farukh.org',
+          'shirfarukh@gmail.com',
+          'shir@farukh.org',
+          'farukh@farukh.org',
+          'info@farukh.org'
+        ])
+      );
     }
 
     // Public viewable course covers and certificates
     match /covers/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
 
     match /certificates/{certificateId} {

@@ -1,20 +1,20 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { View, Text, TextInput, TextInputProps } from 'react-native';
 import { useTheme } from '../../features/theme/ThemeContext';
 
-interface InputProps extends TextInputProps {
+export interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   className?: string;
 }
 
-export const Input: React.FC<InputProps> = ({
+export const Input = forwardRef<TextInput, InputProps>(({
   label,
   error,
   className = '',
   style,
   ...props
-}) => {
+}, ref) => {
   const { colors } = useTheme();
 
   return (
@@ -25,6 +25,7 @@ export const Input: React.FC<InputProps> = ({
         </Text>
       )}
       <TextInput
+        ref={ref}
         placeholderTextColor={colors.textMuted}
         style={[
           {
@@ -46,4 +47,6 @@ export const Input: React.FC<InputProps> = ({
       )}
     </View>
   );
-};
+});
+
+Input.displayName = 'Input';

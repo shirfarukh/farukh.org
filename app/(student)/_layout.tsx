@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, ActivityIndicator, Image } from 'react-native';
 import { Stack, useRouter, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/features/auth/useAuth';
 import { AppLogo } from '../../src/components/ui/AppLogo';
 import { HeaderPreferences } from '../../src/components/ui/HeaderPreferences';
 import { useTheme } from '../../src/features/theme/ThemeContext';
+import { ScrollHeaderProvider, useScrollHeader } from '../../src/features/theme/ScrollHeaderContext';
 
 export default function StudentLayout() {
+  return (
+    <ScrollHeaderProvider>
+      <StudentLayoutContent />
+    </ScrollHeaderProvider>
+  );
+}
+
+function StudentLayoutContent() {
   const { user, isAdmin, loading, logout } = useAuth();
   const { isDark, colors } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+  const { scrollY } = useScrollHeader();
   const { t, i18n } = useTranslation();
   const isPersian = i18n.language?.startsWith('fa');
   const username = user?.email ? user.email.split('@')[0] : (user?.displayName || 'Student');
@@ -29,8 +41,8 @@ export default function StudentLayout() {
 
   const navItems = [
     { label: t('catalog', 'Course Catalog'), path: '/(student)', icon: '📚' },
+    { label: t('community', 'Community'), path: '/(student)/community', icon: '💬' },
     { label: t('blog', 'Blog & Insights'), path: '/(student)/blog', icon: '✍️' },
-    { label: t('myCertificates', 'My Certificates'), path: '/(student)/certificates', icon: '🎓', protected: true },
     { label: t('profile', 'Profile & Account'), path: '/(student)/profile', icon: '👤', protected: true },
   ];
 
@@ -266,58 +278,153 @@ export default function StudentLayout() {
         </View>
       )}
 
-      {/* Mobile Top Header Bar - Optimized & Decluttered */}
+      {/* Mobile Suspended Glassy Header & Content */}
       <View className="flex-1 flex-col">
+        {/* Suspended Glassy Header - Merged Logo & Language/Theme Bar */}
         <View
           style={{
-            backgroundColor: colors.surface,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.headerBorder,
+            position: 'absolute',
+            top: Math.max(insets.top, 8) + 6,
+            left: 12,
+            right: 12,
+            zIndex: 50,
+            height: 52,
+            borderRadius: 99,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 12,
+            backgroundColor: isDark
+              ? `rgba(15, 23, 42, ${(0.88 - Math.min(Math.max(scrollY / 120, 0), 1) * 0.53).toFixed(2)})`
+              : `rgba(255, 255, 255, ${(0.93 - Math.min(Math.max(scrollY / 120, 0), 1) * 0.53).toFixed(2)})`,
+            borderWidth: 1,
+            borderColor: isDark
+              ? `rgba(250, 204, 21, ${(0.28 - Math.min(Math.max(scrollY / 120, 0), 1) * 0.15).toFixed(2)})`
+              : `rgba(0, 0, 0, ${(0.16 - Math.min(Math.max(scrollY / 120, 0), 1) * 0.08).toFixed(2)})`,
+            shadowColor: '#000',
+            shadowOpacity: isDark ? 0.3 : 0.08,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+            elevation: 8,
+            ...(Platform.OS === 'web'
+              ? ({
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                } as any)
+              : {}),
           }}
-          className="md:hidden flex-row items-center justify-between px-3 py-2.5"
+          className="md:hidden"
         >
-          <TouchableOpacity onPress={() => router.push('/(student)')}>
-            <AppLogo size={34} showText />
-          </TouchableOpacity>
+          {/* Left: Back button if subpage, and Logo with Title */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 6 }}>
+            {router.canGoBack() && pathname !== '/' && pathname !== '/(student)' && (
+              <TouchableOpacity
+                onPress={() => router.back()}
+                accessibilityLabel="Back"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: colors.gold, fontWeight: '900', fontSize: 16 }}>‹</Text>
+              </TouchableOpacity>
+            )}
 
-          {/* Grouped, Space-Optimized Header Actions */}
+            <TouchableOpacity
+              onPress={() => router.push('/(student)')}
+              activeOpacity={0.8}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+            >
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: '#0F172A',
+                  borderWidth: 1.5,
+                  borderColor: '#FACC15',
+                  overflow: 'hidden',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Image
+                  source={require('../../assets/logo.png')}
+                  style={{ width: 28, height: 28, borderRadius: 14 }}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontWeight: '900',
+                  fontSize: 14,
+                  letterSpacing: 0.5,
+                }}
+                numberOfLines={1}
+              >
+                FARUKH<Text style={{ color: '#FACC15' }}>.ORG</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Right: Merged Language & Theme Pill + Menu Toggle */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {/* Unified Language & Theme Pill */}
             <HeaderPreferences compact />
 
-            {/* Collapsed Menu Drawer Toggle */}
             <TouchableOpacity
-              onPress={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onPress={() => setMobileMenuOpen((prev) => !prev)}
               accessibilityLabel="Toggle Menu"
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                backgroundColor: colors.cardHover,
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
                 borderWidth: 1,
-                borderColor: colors.cardBorder,
+                borderColor: isDark ? 'rgba(250, 204, 21, 0.25)' : 'rgba(0, 0, 0, 0.1)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ color: colors.gold, fontWeight: '900', fontSize: 16 }}>
+              <Text style={{ color: colors.gold, fontWeight: '900', fontSize: 15 }}>
                 {mobileMenuOpen ? '✕' : '☰'}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Mobile Slide-out Menu Drawer */}
+        {/* Mobile Slide-out Menu Drawer - Suspended Floating Sheet */}
         {mobileMenuOpen && (
           <View
             style={{
-              backgroundColor: colors.surface,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.headerBorder,
+              position: 'absolute',
+              top: Math.max(insets.top, 8) + 64,
+              left: 12,
+              right: 12,
+              zIndex: 49,
+              backgroundColor: isDark
+                ? 'rgba(15, 23, 42, 0.96)'
+                : 'rgba(255, 255, 255, 0.96)',
+              borderRadius: 22,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(0, 0, 0, 0.1)',
               padding: 16,
-              zIndex: 50,
+              shadowColor: '#000',
+              shadowOpacity: 0.35,
+              shadowRadius: 18,
+              elevation: 14,
+              ...(Platform.OS === 'web'
+                ? ({
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                  } as any)
+                : {}),
             }}
-            className="md:hidden shadow-2xl"
+            className="md:hidden"
           >
             {user ? (
               <View
@@ -509,25 +616,19 @@ export default function StudentLayout() {
         <View className="flex-1" style={isWeb ? ({ flex: 1, overflowY: 'auto' } as any) : { flex: 1 }}>
           <Stack
             screenOptions={{
-              headerStyle: { backgroundColor: colors.surface },
-              headerTintColor: colors.text,
-              headerTitleStyle: { fontWeight: 'bold' },
+              headerShown: false,
               contentStyle: { backgroundColor: colors.bg },
-              headerRight: () => (
-                <View style={{ marginRight: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <HeaderPreferences compact />
-                </View>
-              ),
             }}
           >
-            <Stack.Screen name="index" options={{ title: 'FARUKH.ORG' }} />
-            <Stack.Screen name="blog/index" options={{ title: 'Insights & Blog' }} />
-            <Stack.Screen name="blog/[blogId]" options={{ title: 'Article' }} />
-            <Stack.Screen name="course/[courseId]" options={{ title: 'Course Details' }} />
-            <Stack.Screen name="lesson/[courseId]/[lessonId]" options={{ title: 'Lesson Player' }} />
-            <Stack.Screen name="exam/[courseId]" options={{ title: 'Final Exam' }} />
-            <Stack.Screen name="certificates" options={{ title: 'My Certificates' }} />
-            <Stack.Screen name="profile" options={{ title: 'Profile & Account' }} />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="community/index" options={{ headerShown: false }} />
+            <Stack.Screen name="blog/index" options={{ headerShown: false }} />
+            <Stack.Screen name="blog/[blogId]" options={{ headerShown: false }} />
+            <Stack.Screen name="course/[courseId]" options={{ headerShown: false }} />
+            <Stack.Screen name="lesson/[courseId]/[lessonId]" options={{ headerShown: false }} />
+            <Stack.Screen name="exam/[courseId]" options={{ headerShown: false }} />
+            <Stack.Screen name="certificates" options={{ headerShown: false }} />
+            <Stack.Screen name="profile" options={{ headerShown: false }} />
           </Stack>
         </View>
 

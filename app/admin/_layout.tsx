@@ -35,6 +35,7 @@ export default function AdminLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Admin Dashboard' }} />
+      <Stack.Screen name="blog/index" options={{ title: 'Blog & Articles Studio' }} />
       <Stack.Screen name="courses/index" options={{ title: 'Manage Courses' }} />
       <Stack.Screen name="courses/[courseId]" options={{ title: 'Edit Course' }} />
     </Stack>

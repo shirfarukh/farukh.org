@@ -12,6 +12,7 @@ import { db } from '../../lib/firebase';
 import { Course, Module } from '../../types/course';
 import { Lesson } from '../../types/lesson';
 import { QuizQuestion } from '../../types/quiz';
+import { cleanFirestoreData } from '../../lib/utils';
 
 // Courses CRUD
 export async function getAdminCourses(): Promise<Course[]> {
@@ -22,11 +23,11 @@ export async function getAdminCourses(): Promise<Course[]> {
 
 export async function createOrUpdateCourse(courseData: Partial<Course>, courseId?: string): Promise<string> {
   const ref = courseId ? doc(db, 'courses', courseId) : doc(collection(db, 'courses'));
-  const payload = {
+  const payload = cleanFirestoreData({
     ...courseData,
     updatedAt: serverTimestamp(),
     ...(courseId ? {} : { createdAt: serverTimestamp() }),
-  };
+  });
   await setDoc(ref, payload, { merge: true });
   return ref.id;
 }
@@ -62,7 +63,7 @@ export async function createOrUpdateLesson(
   const ref = lessonId
     ? doc(db, 'courses', courseId, 'lessons', lessonId)
     : doc(collection(db, 'courses', courseId, 'lessons'));
-  await setDoc(ref, lessonData, { merge: true });
+  await setDoc(ref, cleanFirestoreData(lessonData), { merge: true });
   return ref.id;
 }
 
@@ -112,7 +113,13 @@ export async function getExamQuestions(courseId: string): Promise<QuizQuestion[]
 
 export async function saveExamQuestion(
   courseId: string,
-  question: { text: string; options: { id: string; text: string }[]; correctOptionId: string; explanation: string },
+  question: {
+    text: string;
+    options: { id: string; text: string }[];
+    correctOptionId: string;
+    explanation: string;
+    moduleId?: string | null;
+  },
   questionId?: string
 ): Promise<string> {
   const qRef = questionId
@@ -124,6 +131,9 @@ export async function saveExamQuestion(
   await setDoc(qRef, {
     text: question.text,
     options: question.options,
+    moduleId: question.moduleId || null,
+    correctOptionId: question.correctOptionId,
+    explanation: question.explanation,
   });
 
   await setDoc(keyRef, {
@@ -132,4 +142,18 @@ export async function saveExamQuestion(
   });
 
   return qRef.id;
+}
+
+export async function deleteExamQuestion(courseId: string, questionId: string): Promise<void> {
+  await deleteDoc(doc(db, 'courses', courseId, 'examQuestions', questionId));
+  await deleteDoc(doc(db, 'courses', courseId, 'examKeys', questionId));
+}
+
+export async function getExamQuestionKeys(courseId: string): Promise<Record<string, { correctOptionId: string; explanation: string }>> {
+  const snap = await getDocs(collection(db, 'courses', courseId, 'examKeys'));
+  const map: Record<string, { correctOptionId: string; explanation: string }> = {};
+  snap.docs.forEach((d) => {
+    map[d.id] = d.data() as any;
+  });
+  return map;
 }

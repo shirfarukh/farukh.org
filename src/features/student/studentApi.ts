@@ -17,6 +17,8 @@ import { httpsCallable } from '@firebase/functions';
 import { db, functions, rtdb } from '../../lib/firebase';
 import { Course } from '../../types/course';
 import { LessonProgress } from '../../types/lesson';
+import { QuizQuestion } from '../../types/quiz';
+import { cleanFirestoreData } from '../../lib/utils';
 
 function formatCourseWithCover(id: string, data: any): Course {
   const youtubeVideoId = data.youtubeVideoId || (data.youtubeUrl ? data.youtubeUrl.split('v=')[1]?.split('&')[0] : null);
@@ -239,4 +241,245 @@ export async function submitQuizCallable(courseId: string, lessonId: string, ans
       feedback: {},
     };
   }
+}
+
+export interface ModuleExamRecord {
+  score: number;
+  passed: boolean;
+  completedAt: number;
+  totalQuestions?: number;
+  correctCount?: number;
+}
+
+export async function getCourseModuleExams(uid: string, courseId: string): Promise<Record<string, ModuleExamRecord>> {
+  if (!uid || !courseId) return {};
+  const storageKey = `module_exams_${uid}_${courseId}`;
+  let localData: Record<string, ModuleExamRecord> = {};
+
+  try {
+    const raw = await AsyncStorage.getItem(storageKey);
+    if (raw) {
+      localData = JSON.parse(raw);
+    }
+  } catch {}
+
+  try {
+    const ref = doc(db, 'progress', `${uid}_${courseId}`);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const cloudData = snap.data()?.moduleExams || {};
+      const merged = { ...localData, ...cloudData };
+      await AsyncStorage.setItem(storageKey, JSON.stringify(merged));
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Error reading module exams from Firestore, using local fallback:', err);
+  }
+
+  return localData;
+}
+
+export async function saveModuleExamResult(
+  uid: string,
+  courseId: string,
+  moduleId: string,
+  score: number,
+  totalQuestions: number = 5,
+  correctCount: number = Math.round((score / 100) * totalQuestions)
+): Promise<ModuleExamRecord> {
+  const passed = score >= 80;
+  const record: ModuleExamRecord = {
+    score,
+    passed,
+    completedAt: Date.now(),
+    totalQuestions,
+    correctCount,
+  };
+
+  const storageKey = `module_exams_${uid}_${courseId}`;
+  try {
+    const raw = await AsyncStorage.getItem(storageKey);
+    const existing = raw ? JSON.parse(raw) : {};
+    existing[moduleId] = record;
+    await AsyncStorage.setItem(storageKey, JSON.stringify(existing));
+  } catch {}
+
+  try {
+    const progressRef = doc(db, 'progress', `${uid}_${courseId}`);
+    await setDoc(
+      progressRef,
+      cleanFirestoreData({
+        uid,
+        courseId,
+        moduleExams: {
+          [moduleId]: record,
+        },
+        updatedAt: serverTimestamp(),
+      }),
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('Could not write module exam result to Firestore:', err);
+  }
+
+  try {
+    const attemptRef = doc(db, 'examAttempts', `${uid}_${courseId}_${moduleId}_${Date.now()}`);
+    await setDoc(
+      attemptRef,
+      cleanFirestoreData({
+        uid,
+        courseId,
+        moduleId,
+        score,
+        passed,
+        totalQuestions,
+        correctCount,
+        type: 'module_assessment',
+        createdAt: serverTimestamp(),
+      })
+    );
+  } catch {}
+
+  return record;
+}
+
+export async function markLessonCompleted(
+  uid: string,
+  courseId: string,
+  lessonId: string,
+  quizScore: number = 100
+): Promise<void> {
+  if (!uid || !courseId || !lessonId) return;
+  const storageKey = `progress_${uid}_${courseId}`;
+  try {
+    const raw = await AsyncStorage.getItem(storageKey);
+    const cur = raw ? JSON.parse(raw) : {};
+    cur[lessonId] = { completed: true, quizScore, updatedAt: Date.now() };
+    await AsyncStorage.setItem(storageKey, JSON.stringify(cur));
+  } catch {}
+
+  try {
+    const pRef = doc(db, 'progress', `${uid}_${courseId}`);
+    await setDoc(
+      pRef,
+      cleanFirestoreData({
+        uid,
+        courseId,
+        lessons: {
+          [lessonId]: {
+            completed: true,
+            quizScore,
+            updatedAt: serverTimestamp(),
+          },
+        },
+        updatedAt: serverTimestamp(),
+      }),
+      { merge: true }
+    );
+  } catch {}
+}
+
+export async function getModuleExamQuestions(
+  courseId: string,
+  moduleId: string,
+  courseTitle: string = 'Course',
+  moduleTitle: string = 'Module'
+): Promise<(QuizQuestion & { correctOptionId?: string; explanation?: string })[]> {
+  try {
+    // 1. Check Firestore examQuestions
+    const qSnap = await getDocs(collection(db, 'courses', courseId, 'examQuestions'));
+    if (!qSnap.empty) {
+      const allQ: (QuizQuestion & { correctOptionId?: string; explanation?: string })[] = qSnap.docs.map(
+        (d) => ({ id: d.id, ...d.data() } as any)
+      );
+
+      // Filter questions matching this specific module
+      const moduleSpecific = allQ.filter((q) => q.moduleId === moduleId);
+      if (moduleSpecific.length > 0) {
+        return moduleSpecific;
+      }
+
+      // If no module-specific questions, return questions from general pool if available
+      const general = allQ.filter((q) => !q.moduleId);
+      if (general.length > 0) {
+        return general.slice(0, 5);
+      }
+    }
+  } catch (err) {
+    console.warn('Error fetching module exam questions from Firestore:', err);
+  }
+
+  // 2. High-quality default questions for the module assessment
+  return [
+    {
+      id: `q_mod_${moduleId}_1`,
+      text: `What is the primary core principle demonstrated in "${moduleTitle}"?`,
+      options: [
+        { id: 'opt-1', text: 'Systematic discipline and fundamental risk assessment' },
+        { id: 'opt-2', text: 'Pure intuition without structured methodology' },
+        { id: 'opt-3', text: 'Following unverified third-party rumors' },
+        { id: 'opt-4', text: 'Ignoring foundational guidelines' },
+      ],
+      correctOptionId: 'opt-1',
+      explanation: 'Systematic discipline and comprehensive risk assessment are the cornerstones of long-term mastery.',
+      moduleId,
+      order: 1,
+    },
+    {
+      id: `q_mod_${moduleId}_2`,
+      text: `When applying principles from ${courseTitle}, what is considered best practice?`,
+      options: [
+        { id: 'opt-1', text: 'Rushing execution without proper verification' },
+        { id: 'opt-2', text: 'Validating hypotheses with verified empirical evidence' },
+        { id: 'opt-3', text: 'Skipping baseline checks' },
+        { id: 'opt-4', text: 'Relying exclusively on single-point indicators' },
+      ],
+      correctOptionId: 'opt-2',
+      explanation: 'Empirical verification ensures consistency and prevents avoidable pitfalls.',
+      moduleId,
+      order: 2,
+    },
+    {
+      id: `q_mod_${moduleId}_3`,
+      text: `Which strategic metric determines ongoing success in this phase of ${moduleTitle}?`,
+      options: [
+        { id: 'opt-1', text: 'Short-term hype cycles' },
+        { id: 'opt-2', text: 'Consistent risk-reward ratios and protocol adherence' },
+        { id: 'opt-3', text: 'Arbitrary capital allocation' },
+        { id: 'opt-4', text: 'Unmeasured speculation' },
+      ],
+      correctOptionId: 'opt-2',
+      explanation: 'A balanced risk-to-reward ratio and strict protocol adherence maintain sustainable results.',
+      moduleId,
+      order: 3,
+    },
+    {
+      id: `q_mod_${moduleId}_4`,
+      text: `How should unexpected volatility or variance be handled in this domain?`,
+      options: [
+        { id: 'opt-1', text: 'Emotional overreaction and rapid panic switches' },
+        { id: 'opt-2', text: 'Objective mitigation strategies according to predefined safety rules' },
+        { id: 'opt-3', text: 'Double down without recalculating risk' },
+        { id: 'opt-4', text: 'Abandon all risk management systems' },
+      ],
+      correctOptionId: 'opt-2',
+      explanation: 'Predefined safety rules and mitigation strategies protect capital and resources.',
+      moduleId,
+      order: 4,
+    },
+    {
+      id: `q_mod_${moduleId}_5`,
+      text: `What criteria confirms mastery before advancing past ${moduleTitle}?`,
+      options: [
+        { id: 'opt-1', text: 'Achieving at least 80% competency and demonstrative accuracy' },
+        { id: 'opt-2', text: 'Merely skimming through without evaluation' },
+        { id: 'opt-3', text: 'Guessing answers randomly' },
+        { id: 'opt-4', text: 'Bypassing verification checkpoints' },
+      ],
+      correctOptionId: 'opt-1',
+      explanation: 'A rigorous 80% passing grade verifies authentic comprehension before progressing to advanced concepts.',
+      moduleId,
+      order: 5,
+    },
+  ];
 }

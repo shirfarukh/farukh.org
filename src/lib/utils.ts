@@ -26,3 +26,27 @@ export function formatDate(timestamp: any): string {
     day: 'numeric',
   });
 }
+
+/**
+ * Recursively cleans an object to ensure no `undefined` values are passed to Firestore.
+ * Firestore setDoc/updateDoc throws an error if any field has the value `undefined`.
+ */
+export function cleanFirestoreData<T extends Record<string, any>>(data: T): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, val] of Object.entries(data)) {
+    if (val === undefined) {
+      continue;
+    } else if (
+      val !== null &&
+      typeof val === 'object' &&
+      !Array.isArray(val) &&
+      !(val instanceof Date) &&
+      typeof (val as any).toMillis !== 'function'
+    ) {
+      result[key] = cleanFirestoreData(val);
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}

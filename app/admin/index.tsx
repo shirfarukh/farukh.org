@@ -12,6 +12,8 @@ import { AppLogo } from '../../src/components/ui/AppLogo';
 import { LanguageSwitcher } from '../../src/components/ui/LanguageSwitcher';
 import { getAdminCourses, createOrUpdateCourse, deleteCourse } from '../../src/features/admin/adminApi';
 import { extractYouTubeId } from '../../src/lib/utils';
+import { CategorySelector } from '../../src/components/ui/CategorySelector';
+import { CourseImageInput } from '../../src/components/ui/CourseImageInput';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
@@ -22,6 +24,8 @@ export default function AdminDashboardScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [faTitle, setFaTitle] = useState('');
+  const [category, setCategory] = useState<string>('Stocks & Crypto');
+  const [coverUrl, setCoverUrl] = useState('');
   const [description, setDescription] = useState('');
   const [body, setBody] = useState('');
   const [keywordsInput, setKeywordsInput] = useState('');
@@ -58,6 +62,8 @@ export default function AdminDashboardScreen() {
         title: title.trim(),
         faTitle: faTitle.trim() || undefined,
         slug,
+        category: category || 'Stocks & Crypto',
+        coverUrl: coverUrl.trim() || undefined,
         description: description.trim() || (body.trim() ? body.trim().slice(0, 160) + '...' : title.trim()),
         body: body.trim() || undefined,
         keywords: keywordsList,
@@ -76,6 +82,8 @@ export default function AdminDashboardScreen() {
       setCreatedSuccessId(newId);
       setTitle('');
       setFaTitle('');
+      setCategory('Stocks & Crypto');
+      setCoverUrl('');
       setDescription('');
       setBody('');
       setKeywordsInput('');
@@ -129,15 +137,34 @@ export default function AdminDashboardScreen() {
             </Text>
           </View>
 
-          <Button
-            title={showCreate ? (isPersian ? 'بستن فرم' : 'Close Form') : (isPersian ? '+ ایجاد دوره جدید' : '+ Add Course')}
-            variant={showCreate ? 'secondary' : 'primary'}
-            onPress={() => {
-              setShowCreate(!showCreate);
-              if (createdSuccessId) setCreatedSuccessId(null);
-            }}
-            className="shadow-lg shadow-brand-900"
-          />
+          <View className="flex-row items-center gap-2">
+            <TouchableOpacity
+              onPress={() => router.push('/admin/blog' as any)}
+              style={{
+                backgroundColor: '#1E293B',
+                borderColor: '#FACC15',
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 14,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 13 }}>
+                ✍️ {isPersian ? 'استودیو وبلاگ' : 'Blog Studio'}
+              </Text>
+            </TouchableOpacity>
+
+            <Button
+              title={showCreate ? (isPersian ? 'بستن فرم' : 'Close Form') : (isPersian ? '+ ایجاد دوره جدید' : '+ Add Course')}
+              variant={showCreate ? 'secondary' : 'primary'}
+              onPress={() => {
+                setShowCreate(!showCreate);
+                if (createdSuccessId) setCreatedSuccessId(null);
+              }}
+              className="shadow-lg shadow-brand-900"
+            />
+          </View>
         </View>
 
         {/* Creation Success Banner */}
@@ -217,6 +244,21 @@ export default function AdminDashboardScreen() {
                 placeholder="مثال: هوش مصنوعی و مهندسی پرامپت"
               />
             </View>
+
+            {/* Category Selector (Stocks & Crypto, Ecommerce, Languages, Morals) */}
+            <CategorySelector
+              selectedCategory={category}
+              onSelectCategory={setCategory}
+              isPersian={isPersian}
+              label={isPersian ? 'دسته‌بندی دوره *' : 'Course Category *'}
+            />
+
+            {/* Course Cover / Feature Image Input */}
+            <CourseImageInput
+              value={coverUrl}
+              onChangeImage={setCoverUrl}
+              label={isPersian ? 'تصویر کاور / شاخص دوره (آپلود یا لینک تصویر)' : 'Course Feature Image (Upload or Link Image)'}
+            />
 
             {/* Description / Summary */}
             <View className="mb-1">
@@ -338,28 +380,44 @@ export default function AdminDashboardScreen() {
                 onPress={() => router.push(`/admin/courses/${item.id}` as any)}
                 className="mb-4 border-surface-border bg-surface-card hover:bg-surface-hover p-5"
               >
-                <View className="flex-row justify-between items-start mb-2">
-                  <View className="flex-1 mr-2">
-                    <Text className="text-lg font-bold text-white mb-0.5">
-                      {isPersian && item.faTitle ? item.faTitle : item.title}
+                <View className="flex-row gap-3 items-start mb-2">
+                  {item.coverUrl ? (
+                    <Image
+                      source={{ uri: item.coverUrl }}
+                      style={{ width: 72, height: 72, borderRadius: 12, backgroundColor: '#1E293B' }}
+                      resizeMode="cover"
+                    />
+                  ) : null}
+                  <View className="flex-1">
+                    <View className="flex-row justify-between items-start mb-1">
+                      <View className="flex-1 mr-2">
+                        <Text className="text-lg font-bold text-white mb-0.5">
+                          {isPersian && item.faTitle ? item.faTitle : item.title}
+                        </Text>
+                        {item.faTitle && (
+                          <Text className="text-slate-400 text-xs">
+                            {item.title}
+                          </Text>
+                        )}
+                      </View>
+                      <View className="flex-row gap-1.5 items-center flex-wrap">
+                        {item.category && (
+                          <View className="bg-amber-950/80 border border-amber-500/50 px-2 py-0.5 rounded-md">
+                            <Text className="text-amber-300 text-[10px] font-bold">{item.category}</Text>
+                          </View>
+                        )}
+                        {item.youtubeVideoId && (
+                          <Badge label="📺 YouTube" variant="danger" />
+                        )}
+                        <Badge label={item.status.toUpperCase()} variant={item.status === 'published' ? 'success' : 'warning'} />
+                      </View>
+                    </View>
+
+                    <Text className="text-slate-300 text-sm mb-2" numberOfLines={2}>
+                      {item.body ? item.body : (isPersian && item.faDescription ? item.faDescription : item.description)}
                     </Text>
-                    {item.faTitle && (
-                      <Text className="text-slate-400 text-xs">
-                        {item.title}
-                      </Text>
-                    )}
-                  </View>
-                  <View className="flex-row gap-1.5 items-center">
-                    {item.youtubeVideoId && (
-                      <Badge label="📺 YouTube" variant="danger" />
-                    )}
-                    <Badge label={item.status.toUpperCase()} variant={item.status === 'published' ? 'success' : 'warning'} />
                   </View>
                 </View>
-
-                <Text className="text-slate-300 text-sm mb-3" numberOfLines={2}>
-                  {item.body ? item.body : (isPersian && item.faDescription ? item.faDescription : item.description)}
-                </Text>
 
                 {item.keywords && item.keywords.length > 0 && (
                   <View className="flex-row flex-wrap gap-1.5 mb-3">
@@ -388,6 +446,26 @@ export default function AdminDashboardScreen() {
         <Text className="text-lg font-bold text-white mb-3 mt-4">
           {isPersian ? 'سایر بخش‌های مدیریت' : 'Additional Management'}
         </Text>
+
+        <Card onPress={() => router.push('/admin/blog' as any)} className="mb-4 border-amber-500/40">
+          <View className="flex-row justify-between items-center">
+            <View className="flex-1 mr-3">
+              <View className="flex-row items-center gap-2 mb-1">
+                <Text style={{ fontSize: 18 }}>✍️</Text>
+                <Text className="text-white text-base font-bold">
+                  {isPersian ? 'استودیو نگارش و انتشار وبلاگ' : 'Blog & Articles Publishing Studio'}
+                </Text>
+                <Badge label="PUBLISH" variant="warning" />
+              </View>
+              <Text className="text-slate-400 text-xs mt-0.5">
+                {isPersian
+                  ? 'نگارش مقالات جدید، انتخاب دسته‌بندی و انتشار مستقیم در صفحه وبلاگ دانشجویان'
+                  : 'Write and publish new articles, select academy categories, and manage blog insights live'}
+              </Text>
+            </View>
+            <Text className="text-gold-400 text-lg font-bold">→</Text>
+          </View>
+        </Card>
 
         <Card onPress={() => router.push('/admin/students')} className="mb-4">
           <View className="flex-row justify-between items-center">

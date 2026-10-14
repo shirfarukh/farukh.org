@@ -25,6 +25,26 @@ import { AppLogo } from '../../src/components/ui/AppLogo';
 import { HeaderPreferences } from '../../src/components/ui/HeaderPreferences';
 import { useAuth } from '../../src/features/auth/useAuth';
 import { useTheme } from '../../src/features/theme/ThemeContext';
+import { CatalogCategoryBar } from '../../src/components/ui/CatalogCategoryBar';
+import { useScrollHeader } from '../../src/features/theme/ScrollHeaderContext';
+
+// ─── Category Icon helper ─────────────────────────────────────────────────────
+function getCategoryIcon(cat?: string): string {
+  switch (cat) {
+    case 'AI & Tech':
+      return '🤖';
+    case 'Stocks & Crypto':
+      return '📈';
+    case 'Ecommerce':
+      return '🛍️';
+    case 'Languages':
+      return '🗣️';
+    case 'Morals':
+      return '⚖️';
+    default:
+      return '📚';
+  }
+}
 
 // ─── Greeting helper ───────────────────────────────────────────────────────────
 function getGreeting(isPersian: boolean): string {
@@ -116,7 +136,7 @@ function EnrolledCourseCard({
             resizeMode="cover"
           />
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
               <View
                 style={{
                   paddingHorizontal: 8,
@@ -131,6 +151,26 @@ function EnrolledCourseCard({
                   {isPersian ? 'ثبت‌نام شده' : 'REGISTERED'}
                 </Text>
               </View>
+              {item.category && (
+                <View
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    backgroundColor: colors.cardHover,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: colors.cardBorder,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <Text style={{ fontSize: 10 }}>{getCategoryIcon(item.category)}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: '700' }}>
+                    {item.category}
+                  </Text>
+                </View>
+              )}
               <Text style={{ color: colors.textMuted, fontSize: 11 }}>
                 {item.lessonCount || 5} {isPersian ? 'درس' : 'lessons'}
               </Text>
@@ -340,7 +380,7 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => router.push('/(student)/blog' as any)}
+          onPress={() => router.push('/(student)/community' as any)}
           style={{
             flex: 1,
             backgroundColor: 'transparent',
@@ -352,7 +392,7 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           }}
         >
           <Text style={{ color: colors.gold, fontWeight: '700', fontSize: 13 }}>
-            ✨ {t('blog', 'Blog & Insights')}
+            💬 {t('community', 'Community & Polls')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -594,6 +634,8 @@ export default function StudentCatalogScreen() {
 
   const [selectedCourseForPreview, setSelectedCourseForPreview] = useState<any | null>(null);
   const [feedbackBanner, setFeedbackBanner] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const { setScrollY } = useScrollHeader();
 
   // 1. Fetch all published courses
   const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
@@ -654,9 +696,26 @@ export default function StudentCatalogScreen() {
     }));
 
   // Catalog courses that are not yet enrolled
-  const catalogCourses = user
+  const baseCatalogCourses = user
     ? courses.filter((c) => !c.id || !enrolledCourseIds.includes(c.id))
     : courses;
+
+  // Filtered by selected category (Stocks & Crypto, Ecommerce, Languages, Morals)
+  const catalogCourses = selectedCategory === 'All'
+    ? baseCatalogCourses
+    : baseCatalogCourses.filter((c) => (c as any).category === selectedCategory);
+
+  // Category course count map
+  const categoryCounts = React.useMemo(() => {
+    const counts: Record<string, number> = { All: baseCatalogCourses.length };
+    for (const c of baseCatalogCourses) {
+      const cat = (c as any).category;
+      if (cat) {
+        counts[cat] = (counts[cat] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [baseCatalogCourses]);
 
   const isLoading = isLoadingCourses || (!!user && isLoadingEnrollments);
 
@@ -670,8 +729,12 @@ export default function StudentCatalogScreen() {
   }
 
   return (
-    <ScreenWrapper scrollable={true}>
-      <View style={{ maxWidth: 768, width: '100%', alignSelf: 'center', flex: 1, paddingVertical: 16, paddingHorizontal: 4 }}>
+    <ScreenWrapper
+      scrollable={true}
+      edgeTop={false}
+      onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+    >
+      <View style={{ maxWidth: 768, width: '100%', alignSelf: 'center', flex: 1, paddingTop: 4, paddingBottom: 16, paddingHorizontal: 4 }}>
 
         {/* ── Top Feedback Toast Banner ── */}
         {feedbackBanner && (
@@ -820,6 +883,14 @@ export default function StudentCatalogScreen() {
           </View>
         </View>
 
+        {/* ── Horizontally Scrollable Category Filter ── */}
+        <CatalogCategoryBar
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          isPersian={isPersian}
+          categoryCounts={categoryCounts}
+        />
+
         {/* ── Catalog Course Cards ── */}
         <FlatList
           data={catalogCourses}
@@ -875,6 +946,31 @@ export default function StudentCatalogScreen() {
                     ✅ VERIFIED CERTIFICATION
                   </Text>
                 </View>
+
+                {/* Category Pill Overlay */}
+                {(item as any).category && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      backgroundColor: isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.95)',
+                      borderRadius: 10,
+                      paddingHorizontal: 9,
+                      paddingVertical: 4,
+                      borderWidth: 1,
+                      borderColor: colors.goldBorder,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11 }}>{getCategoryIcon((item as any).category)}</Text>
+                    <Text style={{ color: colors.gold, fontSize: 10, fontWeight: '800' }}>
+                      {(item as any).category}
+                    </Text>
+                  </View>
+                )}
 
                 <View style={{ padding: 18 }}>
                   <Text style={{ color: colors.text, fontWeight: '800', fontSize: 17, marginBottom: 6, lineHeight: 24 }}>
@@ -993,15 +1089,48 @@ export default function StudentCatalogScreen() {
                 marginVertical: 12,
               }}
             >
-              <Text style={{ fontSize: 36, marginBottom: 10 }}>🎓</Text>
+              <Text style={{ fontSize: 36, marginBottom: 10 }}>{getCategoryIcon(selectedCategory)}</Text>
               <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 6 }}>
-                {isPersian ? 'دوره‌ای یافت نشد' : 'No Courses Available'}
+                {selectedCategory !== 'All'
+                  ? (isPersian
+                      ? `دوره‌ای در دسته‌بندی «${selectedCategory}» یافت نشد`
+                      : `No Courses in "${selectedCategory}"`)
+                  : (isPersian ? 'دوره‌ای یافت نشد' : 'No Courses Available')}
               </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
-                {isPersian
-                  ? 'دوره‌های جدید به زودی در این بخش منتشر خواهند شد.'
-                  : 'New courses will be published here soon.'}
+              <Text
+                style={{
+                  color: colors.textSecondary,
+                  fontSize: 13,
+                  textAlign: 'center',
+                  marginBottom: selectedCategory !== 'All' ? 14 : 0,
+                  maxWidth: 360,
+                }}
+              >
+                {selectedCategory !== 'All'
+                  ? (isPersian
+                      ? 'می‌توانید سایر دسته‌بندی‌ها را انتخاب کنید یا همه دوره‌ها را مشاهده فرمایید.'
+                      : 'Try selecting a different category or view all courses in the catalog.')
+                  : (isPersian
+                      ? 'دوره‌های جدید به زودی در این بخش منتشر خواهند شد.'
+                      : 'New courses will be published here soon.')}
               </Text>
+              {selectedCategory !== 'All' && (
+                <TouchableOpacity
+                  onPress={() => setSelectedCategory('All')}
+                  style={{
+                    backgroundColor: colors.goldBg,
+                    borderColor: colors.goldBorder,
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                  }}
+                >
+                  <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 13 }}>
+                    {isPersian ? 'نمایش همه دوره‌ها' : 'View All Courses'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />

@@ -3,6 +3,7 @@ export interface BulkQuestionInput {
   options: { id: string; text: string }[];
   correctOptionId: string;
   explanation: string;
+  moduleId?: string | null;
 }
 
 function parseCsvLine(line: string): string[] {
@@ -29,7 +30,7 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
-export function parseBulkQuestions(rawContent: string, format: 'json' | 'csv'): BulkQuestionInput[] {
+export function parseBulkQuestions(rawContent: string, format: 'json' | 'csv', defaultModuleId?: string | null): BulkQuestionInput[] {
   if (format === 'json') {
     const parsed = JSON.parse(rawContent);
     if (!Array.isArray(parsed)) throw new Error('JSON root must be an array of questions');
@@ -38,10 +39,11 @@ export function parseBulkQuestions(rawContent: string, format: 'json' | 'csv'): 
       options: q.options || [],
       correctOptionId: q.correctOptionId || 'opt-1',
       explanation: q.explanation || '',
+      moduleId: q.moduleId || defaultModuleId || null,
     }));
   }
 
-  // Quote-aware CSV parser: text,opt1,opt2,opt3,opt4,correctIndex(1-4),explanation
+  // Quote-aware CSV parser: text,opt1,opt2,opt3,opt4,correctIndex(1-4),explanation,[moduleId]
   const lines = rawContent.split(/\r?\n/).filter(line => line.trim().length > 0);
   const questions: BulkQuestionInput[] = [];
 
@@ -51,7 +53,7 @@ export function parseBulkQuestions(rawContent: string, format: 'json' | 'csv'): 
 
     const parts = parseCsvLine(line);
     if (parts.length >= 6) {
-      const [text, opt1, opt2, opt3, opt4, correctIdxStr, explanation] = parts;
+      const [text, opt1, opt2, opt3, opt4, correctIdxStr, explanation, modId] = parts;
       const correctIndex = parseInt(correctIdxStr, 10) || 1;
       const options = [
         { id: 'opt-1', text: opt1 },
@@ -65,6 +67,7 @@ export function parseBulkQuestions(rawContent: string, format: 'json' | 'csv'): 
         options,
         correctOptionId: `opt-${correctIndex}`,
         explanation: explanation || '',
+        moduleId: modId ? modId.trim() : (defaultModuleId || null),
       });
     }
   });

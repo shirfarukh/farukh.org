@@ -10,6 +10,7 @@ export const QuizQuestionSchema = z.object({
   text: z.string().min(5),
   options: z.array(QuizOptionSchema).min(2).max(6),
   order: z.number().default(0),
+  moduleId: z.string().nullable().optional(),
 });
 
 export const AnswerKeySchema = z.object({

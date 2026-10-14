@@ -11,7 +11,15 @@ import { doc, setDoc, serverTimestamp } from '@firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { useAuthStore } from './authStore';
 
-const KNOWN_ADMIN_EMAILS = ['shir@secureai.be', 'admin@example.com', 'admin@farukh.org'];
+const KNOWN_ADMIN_EMAILS = [
+  'shir@secureai.be',
+  'admin@example.com',
+  'admin@farukh.org',
+  'shirfarukh@gmail.com',
+  'shir@farukh.org',
+  'farukh@farukh.org',
+  'info@farukh.org',
+];
 
 export function useAuth() {
   const { user, isAdmin, loading, setUser, setLoading, logout: resetStore } = useAuthStore();

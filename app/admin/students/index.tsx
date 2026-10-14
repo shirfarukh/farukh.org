@@ -71,6 +71,9 @@ export default function AdminStudentsScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.uid}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={true}
+          contentContainerStyle={{ paddingBottom: 60 }}
           renderItem={({ item }) => (
             <Card className="mb-4">
               <View className="flex-row justify-between items-start mb-2">

@@ -7,10 +7,21 @@ export const ExamSettingsSchema = z.object({
   cooldownHours: z.number().min(0).default(24),
 });
 
+export const COURSE_CATEGORIES = [
+  'AI & Tech',
+  'Stocks & Crypto',
+  'Ecommerce',
+  'Languages',
+  'Morals',
+] as const;
+
+export type CourseCategory = typeof COURSE_CATEGORIES[number];
+
 export const CourseSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(2),
   slug: z.string().min(2),
+  category: z.string().optional(),
   description: z.string().default(''),
   body: z.string().optional(),
   keywords: z.array(z.string()).optional(),

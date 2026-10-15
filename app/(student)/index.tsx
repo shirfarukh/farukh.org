@@ -21,7 +21,6 @@ import {
   unenrollFromCourse,
 } from '../../src/features/student/studentApi';
 import { getUserCertificates } from '../../src/features/certificates/certificatesApi';
-import { AppLogo } from '../../src/components/ui/AppLogo';
 import { HeaderPreferences } from '../../src/components/ui/HeaderPreferences';
 import { useAuth } from '../../src/features/auth/useAuth';
 import { useTheme } from '../../src/features/theme/ThemeContext';
@@ -255,125 +254,120 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
       style={{
         marginBottom: 28,
         backgroundColor: colors.card,
-        borderRadius: 28,
+        borderRadius: 24,
         borderWidth: 1,
-        borderColor: isDark ? 'rgba(59,130,246,0.35)' : colors.cardBorder,
-        padding: 24,
+        borderColor: isDark ? 'rgba(59,130,246,0.25)' : colors.cardBorder,
+        padding: 26,
         overflow: 'hidden',
         shadowColor: '#000',
-        shadowOpacity: isDark ? 0.2 : 0.05,
+        shadowOpacity: isDark ? 0.2 : 0.04,
         shadowRadius: 16,
-        elevation: 4,
+        elevation: 3,
       }}
     >
-      {/* Decorative ambient glows */}
-      <View
-        style={{
-          position: 'absolute',
-          top: -60,
-          right: -60,
-          width: 200,
-          height: 200,
-          backgroundColor: '#3B82F6',
-          borderRadius: 100,
-          opacity: isDark ? 0.08 : 0.04,
-        }}
-        pointerEvents="none"
-      />
-      <View
-        style={{
-          position: 'absolute',
-          bottom: -40,
-          left: -40,
-          width: 160,
-          height: 160,
-          backgroundColor: '#FACC15',
-          borderRadius: 80,
-          opacity: isDark ? 0.06 : 0.04,
-        }}
-        pointerEvents="none"
-      />
-
-      {/* Top Bar - Clean & Decluttered */}
+      {/* Top Bar - Clean & Minimalist (No logo, just preferences & Sign In) */}
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 20,
-          paddingBottom: 16,
+          justifyContent: 'flex-end',
+          marginBottom: 22,
+          paddingBottom: 14,
           borderBottomWidth: 1,
           borderBottomColor: colors.headerBorder,
         }}
       >
-        <AppLogo size={46} showText />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <HeaderPreferences compact />
           <TouchableOpacity
             onPress={() => router.push('/(auth)/login')}
             style={{
               backgroundColor: colors.primary,
-              paddingHorizontal: 14,
-              paddingVertical: 7,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
               borderRadius: 12,
             }}
           >
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>
               {t('signIn', 'Sign In')}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Slogan Badge */}
       <View
         style={{
           alignSelf: 'flex-start',
           backgroundColor: colors.goldBg,
           borderWidth: 1,
           borderColor: colors.goldBorder,
-          borderRadius: 10,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          marginBottom: 12,
+          borderRadius: 99,
+          paddingHorizontal: 14,
+          paddingVertical: 5,
+          marginBottom: 14,
         }}
       >
-        <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 10, letterSpacing: 1.5 }}>
-          {isPersian ? 'پلتفرم آموزش و کارآفرینی' : 'ENTREPRENEURSHIP & EDUCATION PLATFORM'}
+        <Text
+          style={{
+            color: colors.gold,
+            fontWeight: '900',
+            fontSize: 12,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+          }}
+        >
+          {isPersian ? '✨ رایگان و معتبر' : '✨ Free and Valid'}
         </Text>
       </View>
 
-      <Text style={{ color: colors.text, fontWeight: '900', fontSize: 26, lineHeight: 34, marginBottom: 12 }}>
+      {/* Slogan & Core Pillars Headline */}
+      <Text
+        style={{
+          color: colors.text,
+          fontWeight: '900',
+          fontSize: 28,
+          lineHeight: 38,
+          marginBottom: 16,
+        }}
+      >
         {isPersian
-          ? 'آموزش کارآفرینی،\nکسب‌وکار و مهارت‌های برتر'
-          : 'Master Entrepreneurship,\nBusiness & High-Demand Skills'}
+          ? 'کارآفرینی، زبان‌ها، هوش مصنوعی و اخلاق'
+          : 'Entrepreneurship, Languages, AI and Moral'}
       </Text>
 
-      <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 22, marginBottom: 20 }}>
-        {isPersian
-          ? 'دسترسی آزاد به دوره‌های تخصصی، مقالات و مدارک دیجیتال معتبر با ثبت‌نام رایگان.'
-          : 'Explore interactive courses, expert insights, and verifiable digital certificates. Register in seconds to start learning.'}
-      </Text>
-
-      {/* Feature pills */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 22 }}>
-        {['📚 Expert Courses', '🎓 Verified Certs', '🧠 Realtime Quizzes', '⚡ Free Access'].map((f) => (
+      {/* Pillars Pills */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+        {[
+          { label: isPersian ? 'کارآفرینی' : 'Entrepreneurship', icon: '💼' },
+          { label: isPersian ? 'زبان‌ها' : 'Languages', icon: '🌍' },
+          { label: isPersian ? 'هوش مصنوعی' : 'AI', icon: '🤖' },
+          { label: isPersian ? 'اخلاق' : 'Moral', icon: '⚖️' },
+        ].map((item) => (
           <View
-            key={f}
+            key={item.label}
             style={{
               backgroundColor: colors.cardHover,
               borderWidth: 1,
               borderColor: colors.cardBorder,
-              borderRadius: 99,
+              borderRadius: 12,
               paddingHorizontal: 12,
-              paddingVertical: 5,
+              paddingVertical: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
             }}
           >
-            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>{f}</Text>
+            <Text style={{ fontSize: 12 }}>{item.icon}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700' }}>
+              {item.label}
+            </Text>
           </View>
         ))}
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 10 }}>
+      {/* Action Buttons */}
+      <View style={{ flexDirection: 'row', gap: 12 }}>
         <TouchableOpacity
           onPress={() => router.push('/(auth)/register')}
           style={{
@@ -385,7 +379,7 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           }}
         >
           <Text style={{ color: isDark ? '#0F172A' : '#FFFFFF', fontWeight: '900', fontSize: 13 }}>
-            🚀 {t('signUp', 'Create Free Account')}
+            🚀 {t('signUp', 'Sign Up')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -401,7 +395,7 @@ function GuestHero({ isPersian, router, t }: { isPersian: boolean; router: any; 
           }}
         >
           <Text style={{ color: colors.gold, fontWeight: '700', fontSize: 13 }}>
-            💬 {t('community', 'Community & Polls')}
+            💬 {t('community', 'Community')}
           </Text>
         </TouchableOpacity>
       </View>

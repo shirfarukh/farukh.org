@@ -226,12 +226,43 @@ export default function ProfileScreen() {
             editable={false}
           />
 
-          <Input
-            label={isPersian ? 'نام نمایشی' : 'Display Name'}
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder={isPersian ? 'نام شما' : 'Your Name'}
-          />
+          {certificates.length > 0 ? (
+            <View
+              style={{
+                backgroundColor: 'rgba(245,158,11,0.08)',
+                borderColor: '#F59E0B',
+                borderWidth: 1,
+                borderRadius: 14,
+                padding: 14,
+                marginBottom: 16,
+              }}
+            >
+              <View className="flex-row items-center gap-2 mb-2">
+                <Text style={{ fontSize: 16 }}>🔒</Text>
+                <Text style={{ color: '#F59E0B', fontWeight: 'bold', fontSize: 13 }}>
+                  {isPersian ? 'نام رسمی قفل شده است (گواهینامه صادر شده)' : 'Official Name Locked (Certificate Issued)'}
+                </Text>
+              </View>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginBottom: 8 }}>
+                {isPersian
+                  ? 'به دلیل صدور تصدیق‌نامه رسمی، نام و تخلص شما قفل گردیده و جهت جلوگیری از هرگونه جعل قابل ویرایش نمی‌باشد.'
+                  : 'Your legal name is permanently locked to prevent credential forgery because you have official certificates issued.'}
+              </Text>
+              <View className="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
+                  {certificates[0]?.nameEn || displayName}
+                  {certificates[0]?.nameFa ? ` • ${certificates[0]?.nameFa}` : ''}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Input
+              label={isPersian ? 'نام نمایشی' : 'Display Name'}
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder={isPersian ? 'نام شما' : 'Your Name'}
+            />
+          )}
 
           {/* Appearance / Theme setting row */}
           <View
@@ -257,11 +288,13 @@ export default function ProfileScreen() {
             <ThemeToggle showLabel />
           </View>
 
-          <Button
-            title={isPersian ? 'بروزرسانی مشخصات' : 'Update Profile'}
-            onPress={handleSave}
-            loading={loading}
-          />
+          {certificates.length === 0 && (
+            <Button
+              title={isPersian ? 'بروزرسانی مشخصات' : 'Update Profile'}
+              onPress={handleSave}
+              loading={loading}
+            />
+          )}
         </Card>
 
         <Button

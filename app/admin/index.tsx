@@ -139,6 +139,23 @@ export default function AdminDashboardScreen() {
 
           <View className="flex-row items-center gap-2">
             <TouchableOpacity
+              onPress={() => router.push('/admin/certificates' as any)}
+              style={{
+                backgroundColor: '#1E293B',
+                borderColor: '#3B82F6',
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 14,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#60A5FA', fontWeight: '800', fontSize: 13 }}>
+                🎓 {isPersian ? 'تصدیق‌نامه‌ها' : 'Certificates'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               onPress={() => router.push('/admin/blog' as any)}
               style={{
                 backgroundColor: '#1E293B',

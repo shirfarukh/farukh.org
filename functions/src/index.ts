@@ -5,5 +5,11 @@ admin.initializeApp();
 export { setUserRole } from './auth';
 export { submitLessonQuiz } from './quiz';
 export { startFinalExam, submitFinalExam } from './exam';
-export { verifyCertificate } from './certificates';
+export {
+  issueCertificate,
+  verifyCertificate,
+  adminRevokeCertificate,
+  adminReissueCertificate,
+  adminSaveCertificateTemplate,
+} from './certificates';
 export { importQuestions, resetStudentProgress, disableUser } from './admin';

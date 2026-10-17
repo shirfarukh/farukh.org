@@ -15,9 +15,11 @@
   },
   "main": "lib/index.js",
   "dependencies": {
+    "@sparticuz/chromium": "^153.0.0",
     "firebase-admin": "^12.1.0",
     "firebase-functions": "^5.0.0",
     "pdf-lib": "^1.17.1",
+    "puppeteer-core": "^25.14.0",
     "qrcode": "^1.5.3",
     "zod": "^3.23.8"
   },

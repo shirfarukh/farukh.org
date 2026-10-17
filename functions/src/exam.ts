@@ -2,7 +2,6 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import { z } from 'zod';
 import { assertAuth, validateInput } from './middleware';
-import { issueCertificateInternal } from './certificates';
 
 const StartExamSchema = z.object({
   courseId: z.string(),
@@ -185,11 +184,18 @@ export const submitFinalExam = onCall(async (request) => {
 
   let certificateId: string | null = null;
   if (passed) {
-    const cert = await issueCertificateInternal(auth.uid, attemptData.courseId, scorePercent);
-    certificateId = cert.certificateId;
+    const existingSnap = await db.collection('certificates')
+      .where('uid', '==', auth.uid)
+      .where('courseId', '==', attemptData.courseId)
+      .where('revoked', '==', false)
+      .get();
+    if (!existingSnap.empty) {
+      certificateId = existingSnap.docs[0].id;
+    }
   }
 
   return {
+    attemptId,
     scorePercent,
     passed,
     passPercentage,

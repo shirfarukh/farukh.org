@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ScreenWrapper } from '../../../src/components/ui/ScreenWrapper';
 import { Card } from '../../../src/components/ui/Card';
@@ -26,6 +26,7 @@ import { CourseImageInput } from '../../../src/components/ui/CourseImageInput';
 
 export default function AdminCourseEditScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const [newModuleTitle, setNewModuleTitle] = useState('');
@@ -337,11 +338,18 @@ export default function AdminCourseEditScreen() {
               </View>
             </View>
 
-            <Button
-              title={isEditingCourse ? 'Close' : '✎ Edit Course Info'}
-              variant={isEditingCourse ? 'secondary' : 'outline'}
-              onPress={() => setIsEditingCourse(!isEditingCourse)}
-            />
+            <View className="flex-row items-center gap-2">
+              <Button
+                title="🎨 Certificate Template"
+                variant="outline"
+                onPress={() => router.push(`/admin/courses/${courseId}/certificate-template` as any)}
+              />
+              <Button
+                title={isEditingCourse ? 'Close' : '✎ Edit Course Info'}
+                variant={isEditingCourse ? 'secondary' : 'outline'}
+                onPress={() => setIsEditingCourse(!isEditingCourse)}
+              />
+            </View>
           </View>
 
           {/* YouTube Preview Badge if present */}

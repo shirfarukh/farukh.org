@@ -246,9 +246,41 @@ export async function submitQuizCallable(courseId: string, lessonId: string, ans
 export interface ModuleExamRecord {
   score: number;
   passed: boolean;
+  finished?: boolean;
   completedAt: number;
   totalQuestions?: number;
   correctCount?: number;
+  attemptTimestamps?: number[];
+}
+
+export function getModuleAttemptsInfo(record?: ModuleExamRecord) {
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const rawTimestamps = record?.attemptTimestamps || (record?.completedAt ? [record.completedAt] : []);
+  const recentAttempts = rawTimestamps.filter((ts) => now - ts < ONE_DAY_MS);
+  const triesUsed = recentAttempts.length;
+  const maxTries = 2;
+  const triesRemaining = Math.max(0, maxTries - triesUsed);
+  const canAttempt = triesUsed < maxTries;
+
+  let cooldownRemainingMs = 0;
+  if (!canAttempt && recentAttempts.length > 0) {
+    const oldestInWindow = Math.min(...recentAttempts);
+    cooldownRemainingMs = Math.max(0, oldestInWindow + ONE_DAY_MS - now);
+  }
+
+  const hoursRemaining = Math.floor(cooldownRemainingMs / (1000 * 60 * 60));
+  const minutesRemaining = Math.ceil((cooldownRemainingMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  return {
+    triesUsed,
+    maxTries,
+    triesRemaining,
+    canAttempt,
+    cooldownRemainingMs,
+    hoursRemaining,
+    minutesRemaining,
+  };
 }
 
 export async function getCourseModuleExams(uid: string, courseId: string): Promise<Record<string, ModuleExamRecord>> {
@@ -285,18 +317,43 @@ export async function saveModuleExamResult(
   moduleId: string,
   score: number,
   totalQuestions: number = 5,
-  correctCount: number = Math.round((score / 100) * totalQuestions)
+  correctCount: number = Math.round((score / 100) * totalQuestions),
+  moduleLessonIds: string[] = []
 ): Promise<ModuleExamRecord> {
-  const passed = score >= 80;
+  const now = Date.now();
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const storageKey = `module_exams_${uid}_${courseId}`;
+
+  // 1. Fetch existing record to preserve attempt history & passed state
+  let existingRecord: ModuleExamRecord | undefined;
+  try {
+    const raw = await AsyncStorage.getItem(storageKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      existingRecord = parsed[moduleId];
+    }
+  } catch {}
+
+  const previousAttempts = existingRecord?.attemptTimestamps || (existingRecord?.completedAt ? [existingRecord.completedAt] : []);
+  const recentAttempts = previousAttempts.filter((t) => now - t < 7 * ONE_DAY_MS);
+  const updatedAttempts = [...recentAttempts, now];
+
+  // Pass threshold is 80% or retained if already passed previously
+  const passed = score >= 80 || existingRecord?.passed === true;
+  // Module is marked as finished when passing score (>= 80%) is achieved
+  const finished = passed;
+
   const record: ModuleExamRecord = {
     score,
     passed,
-    completedAt: Date.now(),
+    finished,
+    completedAt: now,
     totalQuestions,
     correctCount,
+    attemptTimestamps: updatedAttempts,
   };
 
-  const storageKey = `module_exams_${uid}_${courseId}`;
+  // 2. Persist in AsyncStorage
   try {
     const raw = await AsyncStorage.getItem(storageKey);
     const existing = raw ? JSON.parse(raw) : {};
@@ -304,6 +361,28 @@ export async function saveModuleExamResult(
     await AsyncStorage.setItem(storageKey, JSON.stringify(existing));
   } catch {}
 
+  // 3. Mark lessons of this module as completed if finished
+  const lessonUpdates: Record<string, any> = {};
+  if (finished && moduleLessonIds.length > 0) {
+    moduleLessonIds.forEach((lesId) => {
+      lessonUpdates[lesId] = {
+        completed: true,
+        quizScore: Math.max(score, 80),
+        updatedAt: serverTimestamp(),
+      };
+    });
+
+    try {
+      const pRaw = await AsyncStorage.getItem(`progress_${uid}_${courseId}`);
+      const curProg = pRaw ? JSON.parse(pRaw) : {};
+      moduleLessonIds.forEach((lesId) => {
+        curProg[lesId] = { completed: true, quizScore: Math.max(score, 80), updatedAt: now };
+      });
+      await AsyncStorage.setItem(`progress_${uid}_${courseId}`, JSON.stringify(curProg));
+    } catch {}
+  }
+
+  // 4. Persist to Firestore progress document
   try {
     const progressRef = doc(db, 'progress', `${uid}_${courseId}`);
     await setDoc(
@@ -314,6 +393,16 @@ export async function saveModuleExamResult(
         moduleExams: {
           [moduleId]: record,
         },
+        modules: {
+          [moduleId]: {
+            completed: finished,
+            finished,
+            score,
+            passed,
+            updatedAt: serverTimestamp(),
+          },
+        },
+        ...(Object.keys(lessonUpdates).length > 0 ? { lessons: lessonUpdates } : {}),
         updatedAt: serverTimestamp(),
       }),
       { merge: true }
@@ -322,8 +411,9 @@ export async function saveModuleExamResult(
     console.warn('Could not write module exam result to Firestore:', err);
   }
 
+  // 5. Record attempt in examAttempts collection
   try {
-    const attemptRef = doc(db, 'examAttempts', `${uid}_${courseId}_${moduleId}_${Date.now()}`);
+    const attemptRef = doc(db, 'examAttempts', `${uid}_${courseId}_${moduleId}_${now}`);
     await setDoc(
       attemptRef,
       cleanFirestoreData({
@@ -332,10 +422,12 @@ export async function saveModuleExamResult(
         moduleId,
         score,
         passed,
+        finished,
         totalQuestions,
         correctCount,
         type: 'module_assessment',
         createdAt: serverTimestamp(),
+        timestamp: now,
       })
     );
   } catch {}

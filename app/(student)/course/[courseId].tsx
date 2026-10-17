@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../../src/components/ui/ScreenWrapper';
 import { Card } from '../../../src/components/ui/Card';
 import { Button } from '../../../src/components/ui/Button';
@@ -17,6 +18,7 @@ import {
   getCourseModuleExams,
   saveModuleExamResult,
   getModuleExamQuestions,
+  getModuleAttemptsInfo,
   ModuleExamRecord,
 } from '../../../src/features/student/studentApi';
 import { getCourseModules, getCourseLessons } from '../../../src/features/admin/adminApi';
@@ -28,6 +30,8 @@ export default function StudentCourseDetailScreen() {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
+  const { t, i18n } = useTranslation();
+  const isPersian = i18n.language?.startsWith('fa');
 
   // Inline Module Exam Assessment Runner State
   const [activeExamModule, setActiveExamModule] = useState<{ id: string; title: string; order?: number; index: number } | null>(null);
@@ -87,6 +91,17 @@ export default function StudentCourseDetailScreen() {
 
   const handleStartExam = async (m: { id?: string; title: string; order?: number }, index: number) => {
     const modId = m.id || `mod-${index}`;
+    const examRecord = moduleExams[modId];
+    const attemptInfo = getModuleAttemptsInfo(examRecord);
+
+    if (!attemptInfo.canAttempt) {
+      const msg = isPersian
+        ? `محدودیت تلاش: سوالات هر ماژول حداکثر ۲ بار در هر ۲۴ ساعت قابل پاسخ‌گویی هستند. تلاش بعدی شما پس از ${attemptInfo.hoursRemaining} ساعت و ${attemptInfo.minutesRemaining} دقیقه در دسترس خواهد بود.`
+        : `Attempt limit reached: Module questions have a maximum of 2 tries in every 24 hours. Your next try will unlock in ${attemptInfo.hoursRemaining}h ${attemptInfo.minutesRemaining}m.`;
+      Alert.alert(isPersian ? 'محدودیت تعداد تلاش (۲۴ ساعته)' : '24-Hour Attempt Limit', msg);
+      return;
+    }
+
     setActiveExamModule({ ...m, id: modId, index });
     setExamAnswers({});
     setExamStep(0);
@@ -112,6 +127,19 @@ export default function StudentCourseDetailScreen() {
 
   const handleSubmitExam = async () => {
     if (!user?.uid || !courseId || !activeExamModule) return;
+
+    const examRecord = moduleExams[activeExamModule.id];
+    const attemptInfo = getModuleAttemptsInfo(examRecord);
+    if (!attemptInfo.canAttempt) {
+      Alert.alert(
+        isPersian ? 'محدودیت تلاش' : 'Attempt Limit',
+        isPersian
+          ? `شما ۲ تلاش مجاز در ۲۴ ساعت را استفاده کرده‌اید.`
+          : `You have reached the maximum 2 attempts in 24 hours for this module.`
+      );
+      return;
+    }
+
     setIsSubmittingExam(true);
 
     try {
@@ -133,7 +161,11 @@ export default function StudentCourseDetailScreen() {
       const score = total > 0 ? Math.round((correct / total) * 100) : 100;
       const passed = score >= 80;
 
-      await saveModuleExamResult(user.uid, courseId, activeExamModule.id, score, total, correct);
+      const currentModuleLessons = lessons.filter((l) => l.moduleId === activeExamModule.id);
+      const moduleLessonIds = currentModuleLessons.map((l) => l.id!).filter(Boolean);
+
+      // Save result and mark module as finished if score >= 80%
+      await saveModuleExamResult(user.uid, courseId, activeExamModule.id, score, total, correct, moduleLessonIds);
       await queryClient.invalidateQueries({ queryKey: ['courseModuleExams', user.uid, courseId] });
       await queryClient.invalidateQueries({ queryKey: ['courseProgress', user.uid, courseId] });
 
@@ -164,9 +196,10 @@ export default function StudentCourseDetailScreen() {
   const completedCount = publishedLessons.filter((l) => progress[l.id!]?.completed).length;
   const progressPercent = publishedLessons.length > 0 ? (completedCount / publishedLessons.length) * 100 : 0;
   
-  // All modules passed check for final exam eligibility
-  const allModulesPassed = modules.length > 0 && modules.every((m) => moduleExams[m.id!]?.passed === true);
+  // All modules passed/finished check for final exam eligibility
+  const allModulesPassed = modules.length > 0 && modules.every((m) => moduleExams[m.id!]?.passed === true || moduleExams[m.id!]?.finished === true);
   const allLessonsCompleted = publishedLessons.length > 0 && completedCount === publishedLessons.length && allModulesPassed;
+  const finishedModulesCount = modules.filter((m) => moduleExams[m.id!]?.finished === true || moduleExams[m.id!]?.passed === true).length;
 
   return (
     <ScreenWrapper>
@@ -206,7 +239,7 @@ export default function StudentCourseDetailScreen() {
 
           <View style={{ borderTopWidth: 1, borderTopColor: colors.cardBorder }} className="flex-row justify-between items-center mt-3 pt-3">
             <Text style={{ color: colors.textSecondary }} className="text-xs">
-              {completedCount} of {publishedLessons.length} lessons completed
+              {completedCount} of {publishedLessons.length} lessons • {finishedModulesCount} of {modules.length} modules finished
             </Text>
             {allLessonsCompleted ? (
               <Button
@@ -236,13 +269,15 @@ export default function StudentCourseDetailScreen() {
           const moduleLessons = publishedLessons.filter((l) => l.moduleId === m.id);
           const examRecord: ModuleExamRecord | undefined = moduleExams[modId];
           const isExamActiveHere = activeExamModule?.id === modId;
+          const isFinished = examRecord?.finished === true || examRecord?.passed === true;
+          const attemptInfo = getModuleAttemptsInfo(examRecord);
 
           // Sequential Module Unlock Rule:
           // Module 0 is always unlocked.
-          // Module i (i > 0) is unlocked only if Module i - 1's exam is passed with >= 80%.
+          // Module i (i > 0) is unlocked only if Module i - 1's exam is passed/finished with >= 80%.
           const prevModule = mIdx > 0 ? modules[mIdx - 1] : null;
           const prevExam = prevModule?.id ? moduleExams[prevModule.id] : null;
-          const isModuleUnlocked = mIdx === 0 || (prevExam && prevExam.passed === true);
+          const isModuleUnlocked = mIdx === 0 || (prevExam && (prevExam.passed === true || prevExam.finished === true));
 
           return (
             <Card
@@ -252,30 +287,48 @@ export default function StudentCourseDetailScreen() {
                 opacity: isModuleUnlocked ? 1 : 0.65,
                 borderColor: !isModuleUnlocked
                   ? colors.cardBorder
-                  : examRecord?.passed
-                  ? 'rgba(34,197,94,0.4)'
+                  : isFinished
+                  ? 'rgba(34,197,94,0.45)'
                   : isExamActiveHere
                   ? '#3B82F6'
                   : colors.cardBorder,
-                borderWidth: isExamActiveHere ? 1.5 : 1,
+                borderWidth: isExamActiveHere || isFinished ? 1.5 : 1,
               }}
             >
               {/* Module Header Bar */}
               <View className="flex-row justify-between items-center mb-3">
                 <View className="flex-row items-center gap-2 flex-1 mr-2">
-                  <Text style={{ color: colors.gold }} className="text-lg font-bold">
+                  {isFinished ? (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: 'rgba(34,197,94,0.2)',
+                        borderWidth: 1,
+                        borderColor: '#22C55E',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: '#22C55E', fontWeight: '900', fontSize: 12 }}>✓</Text>
+                    </View>
+                  ) : null}
+                  <Text style={{ color: isFinished ? '#22C55E' : colors.gold }} className="text-lg font-bold">
                     Module {m.order || mIdx + 1}: {m.title}
                   </Text>
                 </View>
 
-                {examRecord?.passed ? (
-                  <Badge label={`PASSED (${examRecord.score}%)`} variant="success" />
+                {isFinished ? (
+                  <Badge label={`✓ FINISHED (${examRecord?.score || 80}%)`} variant="success" />
                 ) : !isModuleUnlocked ? (
                   <Badge label="LOCKED" variant="warning" />
+                ) : !attemptInfo.canAttempt ? (
+                  <Badge label={`COOLDOWN (${attemptInfo.hoursRemaining}h)`} variant="warning" />
                 ) : examRecord ? (
-                  <Badge label={`RETAKE NEEDED (${examRecord.score}%)`} variant="warning" />
+                  <Badge label={`RETAKE (${attemptInfo.triesRemaining} TRY LEFT)`} variant="warning" />
                 ) : (
-                  <Badge label="IN PROGRESS" variant="info" />
+                  <Badge label="2 TRIES / 24H" variant="info" />
                 )}
               </View>
 
@@ -443,7 +496,7 @@ export default function StudentCourseDetailScreen() {
                             marginBottom: 2,
                           }}
                         >
-                          {examResult.passed ? 'Module Exam Passed!' : 'Need 80% to Pass'}
+                          {examResult.passed ? '✓ Module Marked as Finished!' : 'Need 80% to Finish Module'}
                         </Text>
                         <Text style={{ color: colors.text, fontSize: 15, fontWeight: 'bold' }}>
                           Score: {examResult.score}% ({examResult.correctCount} of {examResult.totalQuestions} correct)
@@ -458,9 +511,28 @@ export default function StudentCourseDetailScreen() {
                           }}
                         >
                           {examResult.passed
-                            ? `✓ Awesome job! You passed the 80% threshold. Module ${mIdx + 2} is now unlocked right below!`
-                            : `You scored ${examResult.score}%. An 80% score is required to unlock Module ${mIdx + 2}. Review answers below and retake.`}
+                            ? `✓ Outstanding! The module has been marked as FINISHED. Module ${mIdx + 2} is now unlocked right below!`
+                            : `You scored ${examResult.score}%. An 80% score is required to mark this module as finished and unlock Module ${mIdx + 2}.`}
                         </Text>
+
+                        {/* 2 Tries / 24h Status Badge */}
+                        <View
+                          style={{
+                            marginTop: 8,
+                            backgroundColor: isDark ? 'rgba(15,23,42,0.6)' : '#FFFFFF',
+                            borderColor: colors.cardBorder,
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                          }}
+                        >
+                          <Text style={{ color: colors.gold, fontSize: 11, fontWeight: 'bold' }}>
+                            {attemptInfo.triesUsed >= 2
+                              ? `⏳ 2 of 2 tries used for this 24h window (Next try in ${attemptInfo.hoursRemaining}h ${attemptInfo.minutesRemaining}m)`
+                              : `✓ Attempt recorded: ${attemptInfo.triesUsed} of 2 tries used in last 24h (${attemptInfo.triesRemaining} try left)`}
+                          </Text>
+                        </View>
                       </View>
 
                       {/* Question by question feedback */}
@@ -517,21 +589,30 @@ export default function StudentCourseDetailScreen() {
                       {/* Actions */}
                       <View className="flex-row gap-2">
                         <TouchableOpacity
+                          disabled={!attemptInfo.canAttempt}
                           onPress={() => {
+                            if (!attemptInfo.canAttempt) return;
                             setExamResult(null);
                             setExamAnswers({});
                             setExamStep(0);
                           }}
                           style={{
                             flex: 1,
-                            backgroundColor: examResult.passed ? 'rgba(148,163,184,0.2)' : '#3B82F6',
+                            backgroundColor: !attemptInfo.canAttempt
+                              ? '#475569'
+                              : examResult.passed ? 'rgba(148,163,184,0.2)' : '#3B82F6',
                             paddingVertical: 10,
                             borderRadius: 10,
                             alignItems: 'center',
+                            opacity: !attemptInfo.canAttempt ? 0.6 : 1,
                           }}
                         >
                           <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>
-                            {examResult.passed ? 'Retake ↺' : 'Retake Exam (Need ≥80%) ↺'}
+                            {!attemptInfo.canAttempt
+                              ? `2/2 Tries Used (${attemptInfo.hoursRemaining}h wait)`
+                              : examResult.passed
+                              ? `Retake Questions (${attemptInfo.triesRemaining} try left) ↺`
+                              : `Retake Exam (${attemptInfo.triesRemaining} Try Remaining) ↺`}
                           </Text>
                         </TouchableOpacity>
 
@@ -706,12 +787,12 @@ export default function StudentCourseDetailScreen() {
                 /* 2. COLLAPSED SUMMARY VIEW (When not actively taking) */
                 <View
                   style={{
-                    backgroundColor: examRecord?.passed
+                    backgroundColor: isFinished
                       ? isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.06)'
                       : examRecord
                       ? isDark ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.06)'
                       : isDark ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.06)',
-                    borderColor: examRecord?.passed
+                    borderColor: isFinished
                       ? '#22C55E'
                       : examRecord
                       ? '#F59E0B'
@@ -725,7 +806,7 @@ export default function StudentCourseDetailScreen() {
                   <View className="flex-row justify-between items-start mb-2">
                     <View className="flex-row items-center gap-2 flex-1 mr-2">
                       <Text style={{ fontSize: 18 }}>
-                        {examRecord?.passed ? '🏆' : examRecord ? '⚠️' : '📝'}
+                        {isFinished ? '🏆' : examRecord ? '⚠️' : '📝'}
                       </Text>
                       <View className="flex-1">
                         <Text
@@ -739,7 +820,7 @@ export default function StudentCourseDetailScreen() {
                         </Text>
                         <Text
                           style={{
-                            color: examRecord?.passed
+                            color: isFinished
                               ? '#22C55E'
                               : examRecord
                               ? '#F59E0B'
@@ -748,39 +829,101 @@ export default function StudentCourseDetailScreen() {
                             marginTop: 2,
                           }}
                         >
-                          {examRecord?.passed
-                            ? `Passed with ${examRecord.score}%! Required threshold (80%) achieved.`
+                          {isFinished
+                            ? `✓ Module Finished (Passed with ${examRecord?.score || 80}%)! Threshold (80%) achieved.`
                             : examRecord
-                            ? `Score: ${examRecord.score}% — You must score at least 80% to unlock Module ${mIdx + 2}.`
-                            : `Take assessment right here. Pass with ≥80% to unlock Module ${mIdx + 2}.`}
+                            ? `Score: ${examRecord.score}% — You must score at least 80% to finish this module and unlock Module ${mIdx + 2}.`
+                            : `Answer questions right here. Pass with ≥80% to mark module as finished and unlock Module ${mIdx + 2}.`}
                         </Text>
                       </View>
                     </View>
 
-                    <View>
-                      {examRecord?.passed ? (
+                    <View className="flex-col items-end gap-1">
+                      {isFinished ? (
                         <View className="bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-500/40">
-                          <Text className="text-emerald-400 text-xs font-bold">✓ PASSED</Text>
+                          <Text className="text-emerald-400 text-xs font-bold">✓ FINISHED</Text>
                         </View>
                       ) : (
                         <View className="bg-amber-500/20 px-2.5 py-1 rounded-full border border-amber-500/40">
                           <Text className="text-amber-400 text-xs font-bold">80% REQ</Text>
                         </View>
                       )}
+                      <View
+                        style={{
+                          backgroundColor: attemptInfo.canAttempt
+                            ? 'rgba(59,130,246,0.15)'
+                            : 'rgba(239,68,68,0.15)',
+                          borderColor: attemptInfo.canAttempt
+                            ? 'rgba(59,130,246,0.3)'
+                            : 'rgba(239,68,68,0.3)',
+                          borderWidth: 1,
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: attemptInfo.canAttempt ? '#3B82F6' : '#EF4444',
+                            fontSize: 10,
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          {attemptInfo.triesUsed}/2 TRIES (24H)
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
-                  <View className="mt-2 flex-row justify-end">
+                  {/* Cooldown or remaining tries warning */}
+                  {!attemptInfo.canAttempt ? (
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(239,68,68,0.12)',
+                        borderColor: '#EF4444',
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        padding: 10,
+                        marginTop: 6,
+                        marginBottom: 6,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <Text style={{ fontSize: 16 }}>⏳</Text>
+                      <View className="flex-1">
+                        <Text style={{ color: '#EF4444', fontWeight: 'bold', fontSize: 12 }}>
+                          24-Hour Limit Reached (2 / 2 Tries Used)
+                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
+                          Questions allow 2 tries in every 24 hours. Next try available in {attemptInfo.hoursRemaining}h {attemptInfo.minutesRemaining}m.
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  <View className="mt-2 flex-row justify-between items-center">
+                    <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                      {attemptInfo.canAttempt
+                        ? `2 tries per 24 hours (${attemptInfo.triesRemaining} available)`
+                        : `Cooldown active`}
+                    </Text>
+
                     <TouchableOpacity
-                      disabled={!isModuleUnlocked}
+                      disabled={!isModuleUnlocked || !attemptInfo.canAttempt}
                       onPress={() => handleStartExam(m, mIdx)}
                       style={{
-                        backgroundColor: !isModuleUnlocked
+                        backgroundColor: !isModuleUnlocked || !attemptInfo.canAttempt
                           ? '#475569'
-                          : examRecord?.passed
+                          : isFinished
                           ? 'rgba(34,197,94,0.2)'
                           : '#3B82F6',
-                        borderColor: examRecord?.passed ? '#22C55E' : '#3B82F6',
+                        borderColor: !attemptInfo.canAttempt
+                          ? '#64748B'
+                          : isFinished
+                          ? '#22C55E'
+                          : '#3B82F6',
                         borderWidth: 1,
                         paddingHorizontal: 16,
                         paddingVertical: 9,
@@ -788,22 +931,29 @@ export default function StudentCourseDetailScreen() {
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 6,
+                        opacity: (!isModuleUnlocked || !attemptInfo.canAttempt) ? 0.7 : 1,
                       }}
                     >
                       <Text
                         style={{
-                          color: examRecord?.passed ? '#22C55E' : '#FFF',
+                          color: !attemptInfo.canAttempt
+                            ? '#E2E8F0'
+                            : isFinished
+                            ? '#22C55E'
+                            : '#FFF',
                           fontWeight: 'bold',
                           fontSize: 13,
                         }}
                       >
                         {!isModuleUnlocked
                           ? '🔒 Locked'
-                          : examRecord?.passed
+                          : !attemptInfo.canAttempt
+                          ? `⏳ Cooldown (${attemptInfo.hoursRemaining}h ${attemptInfo.minutesRemaining}m)`
+                          : isFinished
                           ? 'Retake Assessment ↺'
                           : examRecord
                           ? 'Retake Exam (Need 80%) →'
-                          : 'Start Module Exam (Take Here) →'}
+                          : 'Answer Module Questions →'}
                       </Text>
                     </TouchableOpacity>
                   </View>

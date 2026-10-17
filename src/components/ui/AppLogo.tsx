@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Image, Text } from 'react-native';
+import { useTheme } from '../../features/theme/ThemeContext';
 
 interface AppLogoProps {
   size?: number;
@@ -11,10 +12,14 @@ interface AppLogoProps {
 export function AppLogo({
   size = 48,
   showText = false,
-  textClassName = 'text-xl font-extrabold text-white tracking-wider',
+  textClassName = 'text-xl font-extrabold tracking-wider',
   className = '',
 }: AppLogoProps) {
+  const { colors, isDark } = useTheme();
   const logoSource = require('../../../assets/logo.png');
+
+  // Strip hardcoded text-white if present to respect dynamic day/night theme
+  const safeTextClassName = textClassName.replace(/\btext-white\b/g, '').trim();
 
   return (
     <View className={`flex-row items-center gap-3 ${className}`}>
@@ -27,10 +32,16 @@ export function AppLogo({
       </View>
       {showText && (
         <View className="justify-center">
-          <Text className={textClassName}>
-            FARUKH<Text className="text-gold-400">.ORG</Text>
+          <Text
+            className={safeTextClassName || 'text-xl font-extrabold tracking-wider'}
+            style={{ color: colors.text }}
+          >
+            FARUKH<Text style={{ color: colors.gold }}>.ORG</Text>
           </Text>
-          <Text className="text-[11px] text-gold-400 font-semibold tracking-tight">
+          <Text
+            className="text-[11px] font-semibold tracking-tight"
+            style={{ color: colors.gold }}
+          >
             Entrepreneurship & Education
           </Text>
         </View>

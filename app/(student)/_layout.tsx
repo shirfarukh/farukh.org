@@ -367,7 +367,7 @@ function StudentLayoutContent() {
                 }}
                 numberOfLines={1}
               >
-                FARUKH<Text style={{ color: '#FACC15' }}>.ORG</Text>
+                FARUKH<Text style={{ color: colors.gold }}>.ORG</Text>
               </Text>
             </TouchableOpacity>
           </View>

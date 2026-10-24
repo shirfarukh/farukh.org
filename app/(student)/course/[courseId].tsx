@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView, Alert, Platform, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -22,12 +22,13 @@ import {
   ModuleExamRecord,
 } from '../../../src/features/student/studentApi';
 import { getCourseModules, getCourseLessons } from '../../../src/features/admin/adminApi';
+import { getUserCertificates } from '../../../src/features/certificates/certificatesApi';
 import { QuizQuestion } from '../../../src/types/quiz';
 
 export default function StudentCourseDetailScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
@@ -35,6 +36,7 @@ export default function StudentCourseDetailScreen() {
 
   // Inline Module Exam Assessment Runner State
   const [activeExamModule, setActiveExamModule] = useState<{ id: string; title: string; order?: number; index: number } | null>(null);
+  const [isReviewMode, setIsReviewMode] = useState(false);
   const [examQuestions, setExamQuestions] = useState<(QuizQuestion & { correctOptionId?: string; explanation?: string })[]>([]);
   const [examAnswers, setExamAnswers] = useState<Record<string, string>>({});
   const [examStep, setExamStep] = useState(0);
@@ -78,6 +80,12 @@ export default function StudentCourseDetailScreen() {
     enabled: !!user?.uid && !!courseId,
   });
 
+  const { data: userCertificates = [] } = useQuery({
+    queryKey: ['userCertificates', user?.uid],
+    queryFn: () => (user?.uid ? getUserCertificates(user.uid) : Promise.resolve([])),
+    enabled: !!user?.uid,
+  });
+
   const enrollMutation = useMutation({
     mutationFn: async () => {
       if (user?.uid && courseId) {
@@ -103,6 +111,7 @@ export default function StudentCourseDetailScreen() {
     }
 
     setActiveExamModule({ ...m, id: modId, index });
+    setIsReviewMode(false);
     setExamAnswers({});
     setExamStep(0);
     setExamResult(null);
@@ -118,8 +127,28 @@ export default function StudentCourseDetailScreen() {
     }
   };
 
+  const handleReviewExam = async (m: any, index: number) => {
+    const modId = m.id || `mod-${index}`;
+    setActiveExamModule({ ...m, id: modId, index });
+    setIsReviewMode(true);
+    setExamResult(null);
+    setExamAnswers({});
+    setExamStep(0);
+    setIsLoadingExam(true);
+
+    try {
+      const qs = await getModuleExamQuestions(courseId!, modId, course?.title, m.title);
+      setExamQuestions(qs);
+    } catch (err) {
+      console.error('Failed to load exam questions for review:', err);
+    } finally {
+      setIsLoadingExam(false);
+    }
+  };
+
   const handleCloseInlineExam = () => {
     setActiveExamModule(null);
+    setIsReviewMode(false);
     setExamResult(null);
     setExamAnswers({});
     setExamStep(0);
@@ -191,22 +220,84 @@ export default function StudentCourseDetailScreen() {
     );
   }
 
-  // Calculate Course Progress
+  // Calculate Course Progress according to number of modules
   const publishedLessons = lessons.filter((l) => l.status === 'published');
   const completedCount = publishedLessons.filter((l) => progress[l.id!]?.completed).length;
-  const progressPercent = publishedLessons.length > 0 ? (completedCount / publishedLessons.length) * 100 : 0;
-  
+  const finishedModulesCount = modules.filter(
+    (m) => moduleExams[m.id!]?.finished === true || moduleExams[m.id!]?.passed === true
+  ).length;
+
+  const hasCertificate = userCertificates.some((c) => c.courseId === courseId);
+
+  // Progrss bar should be calculated accordingly with number of moduls, by finishing of each module test the progress should move
+  const progressPercent = hasCertificate
+    ? 100
+    : modules.length > 0
+    ? Math.min(100, Math.round((finishedModulesCount / modules.length) * 100))
+    : publishedLessons.length > 0
+    ? Math.min(100, Math.round((completedCount / publishedLessons.length) * 100))
+    : 0;
+
   // All modules passed/finished check for final exam eligibility
-  const allModulesPassed = modules.length > 0 && modules.every((m) => moduleExams[m.id!]?.passed === true || moduleExams[m.id!]?.finished === true);
-  const allLessonsCompleted = publishedLessons.length > 0 && completedCount === publishedLessons.length && allModulesPassed;
-  const finishedModulesCount = modules.filter((m) => moduleExams[m.id!]?.finished === true || moduleExams[m.id!]?.passed === true).length;
+  const unpassedModules = modules.filter(
+    (m) => !(moduleExams[m.id!]?.passed === true || moduleExams[m.id!]?.finished === true)
+  );
+  const allModulesPassed = modules.length === 0 || unpassedModules.length === 0;
+  const missingLessonsCount = Math.max(0, publishedLessons.length - completedCount);
+  const allLessonsCompleted = (publishedLessons.length === 0 || missingLessonsCount === 0) && allModulesPassed;
+  const isFinalExamUnlocked = allLessonsCompleted || isAdmin;
+  const isSchoolGrade = Boolean(
+    course?.category === 'School Grades' ||
+    course?.category?.toLowerCase().includes('school') ||
+    course?.category?.toLowerCase().includes('grade') ||
+    course?.title?.toLowerCase().includes('grade') ||
+    course?.title?.toLowerCase().includes('school') ||
+    course?.faTitle?.includes('صنف') ||
+    course?.faTitle?.includes('مکتب')
+  );
 
   return (
     <ScreenWrapper>
       <View className="max-w-4xl w-full self-center">
         {/* Header Banner */}
         <Card className="mb-6">
-          <Text style={{ color: colors.text }} className="text-2xl font-bold mb-2">{course.title}</Text>
+          {course.isUnfinished && (
+            <View
+              style={{
+                backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : '#FEF3C7',
+                borderColor: 'rgba(245, 158, 11, 0.4)',
+                borderWidth: 1,
+                borderRadius: 14,
+                padding: 12,
+                marginBottom: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <Text style={{ fontSize: 22 }}>⏳</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#D97706', fontWeight: 'bold', fontSize: 13 }}>
+                  {isPersian ? 'دوره در حال تدوین / تکمیل نشده' : 'Course In Progress (Unfinished)'}
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                  {isPersian
+                    ? 'این دوره هنوز توسط استاد تکمیل نگردیده است. شما می‌توانید تمام درس‌های موجود را مشاهده و تمرین کنید؛ با این حال صدور تصدیق‌نامه تا زمان تکمیل نهایی دوره غیرفعال است.'
+                    : 'This course is currently being prepared by the instructor. You can study all available lessons, but official certificates will not be issued until the course is fully completed.'}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <View className="flex-row items-center gap-2 mb-2 flex-wrap">
+            <Text style={{ color: colors.text }} className="text-2xl font-bold flex-1">{course.title}</Text>
+            {course.isUnfinished && (
+              <Badge
+                label={isPersian ? 'در حال تدوین' : 'UNFINISHED'}
+                variant="warning"
+              />
+            )}
+          </View>
           <Text style={{ color: colors.textSecondary }} className="text-sm mb-3 leading-6">{course.body || course.description}</Text>
 
           {course.keywords && course.keywords.length > 0 && (
@@ -239,14 +330,52 @@ export default function StudentCourseDetailScreen() {
 
           <View style={{ borderTopWidth: 1, borderTopColor: colors.cardBorder }} className="flex-row justify-between items-center mt-3 pt-3">
             <Text style={{ color: colors.textSecondary }} className="text-xs">
-              {completedCount} of {publishedLessons.length} lessons • {finishedModulesCount} of {modules.length} modules finished
+              {modules.length > 0
+                ? isPersian
+                  ? `${finishedModulesCount} از ${modules.length} ماژول تکمیل شده (${progressPercent}٪)`
+                  : `${finishedModulesCount} of ${modules.length} modules completed (${progressPercent}%)`
+                : isPersian
+                ? `${completedCount} از ${publishedLessons.length} درس تکمیل شده (${progressPercent}٪)`
+                : `${completedCount} of ${publishedLessons.length} lessons completed (${progressPercent}%)`}
             </Text>
-            {allLessonsCompleted ? (
+            {course.isUnfinished ? (
+              <View className="bg-amber-950/60 border border-amber-500/50 px-3 py-1.5 rounded-xl">
+                <Text className="text-amber-300 text-xs font-bold">
+                  {isPersian ? '⏳ دوره در حال تدوین • گواهینامه غیرفعال' : '⏳ In Progress • No Cert'}
+                </Text>
+              </View>
+            ) : hasCertificate ? (
               <Button
-                title="Take Course Final Exam →"
+                title={isPersian ? "مشاهده تصدیق‌نامه رسمی 🎓" : "View Official Certificate 🎓"}
                 variant="primary"
                 onPress={() => router.push(`/(student)/exam/${courseId}` as any)}
               />
+            ) : isFinalExamUnlocked ? (
+              <Button
+                title={allLessonsCompleted ? "Take Course Final Exam →" : "Take Course Final Exam (Admin Bypass) 🔓"}
+                variant="primary"
+                onPress={() => router.push(`/(student)/exam/${courseId}` as any)}
+              />
+            ) : isSchoolGrade && completedCount === 0 ? (
+              <View style={{ gap: 8, width: '100%' }}>
+                <View style={{ backgroundColor: isDark ? 'rgba(250, 204, 21, 0.08)' : 'rgba(250, 204, 21, 0.12)', borderWidth: 1, borderColor: colors.goldBorder, borderRadius: 12, padding: 10 }}>
+                  <Text style={{ color: isDark ? '#FDE047' : '#854D0E', fontSize: 12, fontWeight: '600', textAlign: isPersian ? 'right' : 'left' }}>
+                    {isPersian
+                      ? 'توجه: ثبت‌نام در مکتب دختران تنها از طریق درخواست ایمیل انجام می‌شود؛ ثبت‌نام مستقیم غیرفعال است.'
+                      : 'Notice: Registration for Girls School is exclusively available via email application (no direct registration).'}
+                  </Text>
+                </View>
+                <Button
+                  title={isPersian ? "ثبت‌نام از طریق ایمیل" : "Register via Email"}
+                  variant="primary"
+                  onPress={() => {
+                    const gradeLabel = course.title || 'School Grade';
+                    const subject = encodeURIComponent(`Girls School Registration: ${gradeLabel}`);
+                    const body = encodeURIComponent(`Hello Farukh Admissions Team,\n\nI would like to apply for registration in: ${gradeLabel}.\n\nStudent Full Name:\nGuardian Full Name:\nPhone / WhatsApp:\nCity / Location:\n\nThank you.`);
+                    Linking.openURL(`mailto:info@farukh.org?subject=${subject}&body=${body}`);
+                  }}
+                />
+              </View>
             ) : (
               <Button
                 title="Enroll / Continue"
@@ -407,13 +536,44 @@ export default function StudentCourseDetailScreen() {
                         ) : null}
                       </View>
 
-                      {isCompleted ? (
-                        <Badge label="COMPLETED" variant="success" />
-                      ) : isLessonAccessible ? (
-                        <Badge label="START LESSON" variant="info" />
-                      ) : (
-                        <Badge label="LOCKED" variant="warning" />
-                      )}
+                      <View className="flex-row items-center gap-2">
+                        {les.pdfUrl ? (
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation?.();
+                              if (Platform.OS === 'web') {
+                                window.open(les.pdfUrl, '_blank');
+                              } else {
+                                Linking.openURL(les.pdfUrl!);
+                              }
+                            }}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              backgroundColor: 'rgba(239,68,68,0.15)',
+                              borderColor: 'rgba(239,68,68,0.4)',
+                              borderWidth: 1,
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 12 }}>📄</Text>
+                            <Text style={{ color: '#F87171', fontSize: 11, fontWeight: 'bold' }}>
+                              PDF Note
+                            </Text>
+                          </TouchableOpacity>
+                        ) : null}
+
+                        {isCompleted ? (
+                          <Badge label="COMPLETED" variant="success" />
+                        ) : isLessonAccessible ? (
+                          <Badge label="START LESSON" variant="info" />
+                        ) : (
+                          <Badge label="LOCKED" variant="warning" />
+                        )}
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -464,10 +624,168 @@ export default function StudentCourseDetailScreen() {
                   {/* Loading State */}
                   {isLoadingExam ? (
                     <View style={{ paddingVertical: 30, alignItems: 'center' }}>
-                      <ActivityIndicator size="small" color="#3B82F6" />
+                      <ActivityIndicator size="small" color="#22C55E" />
                       <Text style={{ color: colors.textSecondary, marginTop: 8, fontSize: 12 }}>
-                        Loading assessment questions...
+                        {isReviewMode ? 'Loading questions & study review...' : 'Loading assessment questions...'}
                       </Text>
+                    </View>
+                  ) : isReviewMode ? (
+                    /* Review Mode View */
+                    <View style={{ paddingVertical: 4 }}>
+                      <View
+                        style={{
+                          backgroundColor: isDark ? 'rgba(34,197,94,0.12)' : 'rgba(34,197,94,0.08)',
+                          borderColor: '#22C55E',
+                          borderWidth: 1,
+                          borderRadius: 14,
+                          padding: 14,
+                          marginBottom: 14,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ fontSize: 26, marginBottom: 2 }}>📖</Text>
+                        <Text style={{ color: '#22C55E', fontSize: 16, fontWeight: 'bold' }}>
+                          Module Assessment Review & Explanations
+                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 4 }}>
+                          Study all questions, correct answers, and explanations. Your completed status is preserved!
+                        </Text>
+                      </View>
+
+                      {examQuestions.length === 0 ? (
+                        <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                          <Text style={{ color: colors.textSecondary }}>No questions configured for this module.</Text>
+                        </View>
+                      ) : (
+                        <View style={{ marginBottom: 14 }}>
+                          {examQuestions.map((q, qIdx) => {
+                            const correctOption = q.options.find((o) => o.id === q.correctOptionId);
+
+                            return (
+                              <View
+                                key={q.id || qIdx}
+                                style={{
+                                  backgroundColor: isDark ? 'rgba(30,41,59,0.7)' : '#F8FAFC',
+                                  borderColor: colors.cardBorder,
+                                  borderWidth: 1,
+                                  borderRadius: 14,
+                                  padding: 14,
+                                  marginBottom: 12,
+                                }}
+                              >
+                                <View className="flex-row justify-between items-center mb-2">
+                                  <Text style={{ color: colors.gold, fontWeight: 'bold', fontSize: 12 }}>
+                                    QUESTION {qIdx + 1} OF {examQuestions.length}
+                                  </Text>
+                                  <View className="bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">
+                                    <Text className="text-emerald-400 text-[10px] font-bold">✓ CORRECT ANSWER</Text>
+                                  </View>
+                                </View>
+
+                                <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>
+                                  {q.text}
+                                </Text>
+
+                                <View style={{ gap: 6, marginBottom: 10 }}>
+                                  {q.options.map((opt) => {
+                                    const isCorrect = opt.id === q.correctOptionId;
+                                    return (
+                                      <View
+                                        key={opt.id}
+                                        style={{
+                                          backgroundColor: isCorrect
+                                            ? 'rgba(34,197,94,0.15)'
+                                            : isDark ? 'rgba(15,23,42,0.5)' : '#FFFFFF',
+                                          borderColor: isCorrect ? '#22C55E' : colors.cardBorder,
+                                          borderWidth: isCorrect ? 1.5 : 1,
+                                          borderRadius: 10,
+                                          padding: 10,
+                                          flexDirection: 'row',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                        }}
+                                      >
+                                        <Text
+                                          style={{
+                                            color: isCorrect ? '#22C55E' : colors.text,
+                                            fontWeight: isCorrect ? '700' : '500',
+                                            fontSize: 13,
+                                            flex: 1,
+                                          }}
+                                        >
+                                          {opt.text}
+                                        </Text>
+                                        {isCorrect ? (
+                                          <View className="bg-emerald-500/20 px-2 py-0.5 rounded">
+                                            <Text style={{ color: '#22C55E', fontWeight: 'bold', fontSize: 11 }}>
+                                              ✓ Correct
+                                            </Text>
+                                          </View>
+                                        ) : null}
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+
+                                {q.explanation ? (
+                                  <View
+                                    style={{
+                                      backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.06)',
+                                      borderColor: 'rgba(59,130,246,0.3)',
+                                      borderWidth: 1,
+                                      borderRadius: 10,
+                                      padding: 10,
+                                    }}
+                                  >
+                                    <Text style={{ color: '#60A5FA', fontWeight: 'bold', fontSize: 11, marginBottom: 2 }}>
+                                      💡 Explanation & Study Guide:
+                                    </Text>
+                                    <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
+                                      {q.explanation}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      <View className="flex-row gap-2">
+                        {attemptInfo.canAttempt || isAdmin ? (
+                          <TouchableOpacity
+                            onPress={() => handleStartExam(m, mIdx)}
+                            style={{
+                              flex: 1,
+                              backgroundColor: 'rgba(59,130,246,0.15)',
+                              borderColor: '#3B82F6',
+                              borderWidth: 1,
+                              paddingVertical: 10,
+                              borderRadius: 10,
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text style={{ color: '#3B82F6', fontWeight: 'bold', fontSize: 13 }}>
+                              Retake Assessment ↺
+                            </Text>
+                          </TouchableOpacity>
+                        ) : null}
+
+                        <TouchableOpacity
+                          onPress={handleCloseInlineExam}
+                          style={{
+                            flex: 1,
+                            backgroundColor: '#22C55E',
+                            paddingVertical: 10,
+                            borderRadius: 10,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>
+                            Close Review ✓
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   ) : examResult ? (
                     /* Instant Results View within same UI */
@@ -903,59 +1221,83 @@ export default function StudentCourseDetailScreen() {
                     </View>
                   ) : null}
 
-                  <View className="mt-2 flex-row justify-between items-center">
+                  <View className="mt-2 flex-row justify-between items-center flex-wrap gap-2">
                     <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
                       {attemptInfo.canAttempt
                         ? `2 tries per 24 hours (${attemptInfo.triesRemaining} available)`
                         : `Cooldown active`}
                     </Text>
 
-                    <TouchableOpacity
-                      disabled={!isModuleUnlocked || !attemptInfo.canAttempt}
-                      onPress={() => handleStartExam(m, mIdx)}
-                      style={{
-                        backgroundColor: !isModuleUnlocked || !attemptInfo.canAttempt
-                          ? '#475569'
-                          : isFinished
-                          ? 'rgba(34,197,94,0.2)'
-                          : '#3B82F6',
-                        borderColor: !attemptInfo.canAttempt
-                          ? '#64748B'
-                          : isFinished
-                          ? '#22C55E'
-                          : '#3B82F6',
-                        borderWidth: 1,
-                        paddingHorizontal: 16,
-                        paddingVertical: 9,
-                        borderRadius: 10,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        opacity: (!isModuleUnlocked || !attemptInfo.canAttempt) ? 0.7 : 1,
-                      }}
-                    >
-                      <Text
+                    <View className="flex-row items-center gap-2">
+                      {/* Review Button: Always available once module exam has been taken/finished */}
+                      {(isFinished || examRecord) && (
+                        <TouchableOpacity
+                          onPress={() => handleReviewExam(m, mIdx)}
+                          style={{
+                            backgroundColor: 'rgba(34,197,94,0.15)',
+                            borderColor: '#22C55E',
+                            borderWidth: 1,
+                            paddingHorizontal: 14,
+                            paddingVertical: 8,
+                            borderRadius: 10,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 5,
+                          }}
+                        >
+                          <Text style={{ color: '#22C55E', fontWeight: 'bold', fontSize: 12 }}>
+                            Review Questions 📖
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity
+                        disabled={!isModuleUnlocked || (!attemptInfo.canAttempt && !isAdmin)}
+                        onPress={() => handleStartExam(m, mIdx)}
                         style={{
-                          color: !attemptInfo.canAttempt
-                            ? '#E2E8F0'
+                          backgroundColor: (!isModuleUnlocked || (!attemptInfo.canAttempt && !isAdmin))
+                            ? '#475569'
                             : isFinished
-                            ? '#22C55E'
-                            : '#FFF',
-                          fontWeight: 'bold',
-                          fontSize: 13,
+                            ? 'rgba(59,130,246,0.15)'
+                            : '#3B82F6',
+                          borderColor: (!attemptInfo.canAttempt && !isAdmin)
+                            ? '#64748B'
+                            : isFinished
+                            ? '#3B82F6'
+                            : '#3B82F6',
+                          borderWidth: 1,
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 10,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          opacity: (!isModuleUnlocked || (!attemptInfo.canAttempt && !isAdmin)) ? 0.7 : 1,
                         }}
                       >
-                        {!isModuleUnlocked
-                          ? '🔒 Locked'
-                          : !attemptInfo.canAttempt
-                          ? `⏳ Cooldown (${attemptInfo.hoursRemaining}h ${attemptInfo.minutesRemaining}m)`
-                          : isFinished
-                          ? 'Retake Assessment ↺'
-                          : examRecord
-                          ? 'Retake Exam (Need 80%) →'
-                          : 'Answer Module Questions →'}
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={{
+                            color: (!attemptInfo.canAttempt && !isAdmin)
+                              ? '#E2E8F0'
+                              : isFinished
+                              ? '#3B82F6'
+                              : '#FFF',
+                            fontWeight: 'bold',
+                            fontSize: 12,
+                          }}
+                        >
+                          {!isModuleUnlocked
+                            ? '🔒 Locked'
+                            : (!attemptInfo.canAttempt && !isAdmin)
+                            ? `⏳ Cooldown (${attemptInfo.hoursRemaining}h ${attemptInfo.minutesRemaining}m)`
+                            : isFinished
+                            ? 'Retake Assessment ↺'
+                            : examRecord
+                            ? 'Retake Exam (Need 80%) →'
+                            : 'Answer Module Questions →'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               )}
@@ -967,7 +1309,7 @@ export default function StudentCourseDetailScreen() {
         <Card
           className="mb-8 p-5"
           style={{
-            borderColor: allLessonsCompleted ? colors.gold : colors.cardBorder,
+            borderColor: isFinalExamUnlocked ? colors.gold : colors.cardBorder,
             borderWidth: 1.5,
             backgroundColor: isDark ? 'rgba(30,41,59,0.7)' : '#F8FAFC',
           }}
@@ -980,23 +1322,43 @@ export default function StudentCourseDetailScreen() {
                   Course Final Certification Exam
                 </Text>
                 <Badge
-                  label={allLessonsCompleted ? 'READY' : 'LOCKED'}
-                  variant={allLessonsCompleted ? 'success' : 'warning'}
+                  label={
+                    allLessonsCompleted
+                      ? 'READY'
+                      : isAdmin
+                      ? 'ADMIN TEST ACCESS'
+                      : 'LOCKED'
+                  }
+                  variant={
+                    allLessonsCompleted
+                      ? 'success'
+                      : isAdmin
+                      ? 'info'
+                      : 'warning'
+                  }
                 />
               </View>
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4, lineHeight: 18 }}>
                 {allLessonsCompleted
                   ? 'All module assessments passed with ≥80%! You are qualified to take the comprehensive final exam.'
-                  : 'Separated final exam. Complete all lessons and pass every module assessment with ≥80% to access.'}
+                  : isAdmin
+                  ? `Student prerequisites: Complete all published lessons (${missingLessonsCount} remaining) and pass all module assessments (${unpassedModules.length} unpassed). As an Administrator, you have full bypass access to take and test the final exam.`
+                  : `Locked: Please complete ${missingLessonsCount > 0 ? `${missingLessonsCount} remaining lesson(s)` : ''}${missingLessonsCount > 0 && unpassedModules.length > 0 ? ' and ' : ''}${unpassedModules.length > 0 ? `pass ${unpassedModules.length} module assessment(s) with ≥80%` : ''} to qualify for the final certification exam.`}
               </Text>
             </View>
           </View>
 
           <View className="mt-3 flex-row justify-end">
             <Button
-              title={allLessonsCompleted ? 'Take Course Final Exam →' : '🔒 Final Exam Locked (Pass All Modules)'}
-              variant={allLessonsCompleted ? 'primary' : 'outline'}
-              disabled={!allLessonsCompleted}
+              title={
+                allLessonsCompleted
+                  ? 'Take Course Final Exam →'
+                  : isAdmin
+                  ? 'Take Course Final Exam (Admin Bypass) 🔓'
+                  : `🔒 Final Exam Locked (${missingLessonsCount > 0 ? `${missingLessonsCount} Lessons Left` : `${unpassedModules.length} Modules Left`})`
+              }
+              variant={isFinalExamUnlocked ? 'primary' : 'outline'}
+              disabled={!isFinalExamUnlocked}
               onPress={() => router.push(`/(student)/exam/${courseId}` as any)}
             />
           </View>

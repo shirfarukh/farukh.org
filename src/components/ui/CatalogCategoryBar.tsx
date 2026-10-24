@@ -88,7 +88,7 @@ export const CatalogCategoryBar: React.FC<CatalogCategoryBarProps> = ({
   categoryCounts,
 }) => {
   const { colors, isDark } = useTheme();
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {

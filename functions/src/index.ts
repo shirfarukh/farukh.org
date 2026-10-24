@@ -13,3 +13,15 @@ export {
   adminSaveCertificateTemplate,
 } from './certificates';
 export { importQuestions, resetStudentProgress, disableUser } from './admin';
+export {
+  submitInstructorApplication,
+  adminReviewInstructorApplication,
+  adminSuspendInstructor,
+} from './instructor';
+export {
+  submitCourseReviewRequest,
+  adminReviewCourse,
+  requestCourseArchiveOrDelete,
+  adminTransferCourseOwnership,
+  adminUnpublishCourse,
+} from './courseReview';

@@ -12,17 +12,22 @@ import {
   createOrUpdateCourse,
   getCourseModules,
   getCourseLessons,
+  deleteCourse,
   createModule,
   createOrUpdateLesson,
+  deleteLesson,
   saveExamQuestion,
   deleteExamQuestion,
   getExamQuestions,
 } from '../../../src/features/admin/adminApi';
 import { parseBulkQuestions } from '../../../src/features/admin/csvImport';
 import { extractYouTubeId } from '../../../src/lib/utils';
-import { Image, TouchableOpacity, Platform } from 'react-native';
+import { Image, TouchableOpacity, Platform, Linking, Alert } from 'react-native';
 import { CategorySelector } from '../../../src/components/ui/CategorySelector';
 import { CourseImageInput } from '../../../src/components/ui/CourseImageInput';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../../src/lib/firebase';
+import { Lesson } from '../../../src/types/lesson';
 
 export default function AdminCourseEditScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
@@ -40,12 +45,20 @@ export default function AdminCourseEditScreen() {
   const [editBody, setEditBody] = useState('');
   const [editKeywords, setEditKeywords] = useState('');
   const [editYouTubeUrl, setEditYouTubeUrl] = useState('');
+  const [editInstructorBio, setEditInstructorBio] = useState('');
+  const [editStatus, setEditStatus] = useState<'published' | 'draft' | 'in_review' | 'changes_requested' | 'rejected' | 'archived'>('published');
+  const [editIsUnfinished, setEditIsUnfinished] = useState(false);
+  const [editPassPercentage, setEditPassPercentage] = useState('80');
   const [saveCourseSuccess, setSaveCourseSuccess] = useState(false);
 
   // Lesson Form State
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [lessonTitle, setLessonTitle] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [introMarkdown, setIntroMarkdown] = useState('');
+  const [lessonPdfUrl, setLessonPdfUrl] = useState('');
+  const [lessonPdfName, setLessonPdfName] = useState('');
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
 
   // Bulk Import State
   const [showBulkExam, setShowBulkExam] = useState(false);
@@ -84,6 +97,10 @@ export default function AdminCourseEditScreen() {
       setEditBody(course.body || course.description || '');
       setEditKeywords(course.keywords ? course.keywords.join(', ') : '');
       setEditYouTubeUrl(course.youtubeUrl || (course.youtubeVideoId ? `https://www.youtube.com/watch?v=${course.youtubeVideoId}` : ''));
+      setEditInstructorBio(course.instructorBio || (course as any).ownerBio || '');
+      setEditStatus(course.status || 'published');
+      setEditIsUnfinished(!!course.isUnfinished);
+      setEditPassPercentage(course.passPercentage ? String(course.passPercentage) : '80');
     }
   }, [course?.id, isEditingCourse]);
 
@@ -119,8 +136,8 @@ export default function AdminCourseEditScreen() {
   const addLessonMutation = useMutation({
     mutationFn: async (moduleId: string) => {
       if (!courseId) return;
-      const vId = extractYouTubeId(youtubeUrl) || 'REPLACE_ME';
-      await createOrUpdateLesson(courseId, {
+      const vId = extractYouTubeId(youtubeUrl) || youtubeUrl || 'REPLACE_ME';
+      const payload: Partial<Lesson> = {
         moduleId,
         title: lessonTitle,
         introMarkdown: introMarkdown || 'Introductory content for this lesson.',
@@ -128,17 +145,77 @@ export default function AdminCourseEditScreen() {
         durationSec: 300,
         quizPassPercentage: 70,
         status: 'published',
-        order: lessons.length + 1,
-      });
+        order: editingLessonId
+          ? lessons.find((l) => l.id === editingLessonId)?.order || lessons.length
+          : lessons.length + 1,
+        pdfUrl: lessonPdfUrl.trim() || undefined,
+        pdfName: lessonPdfName.trim() || undefined,
+      };
+
+      await createOrUpdateLesson(courseId, payload, editingLessonId || undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminLessons', courseId] });
       setShowAddLesson(null);
+      setEditingLessonId(null);
       setLessonTitle('');
       setYoutubeUrl('');
       setIntroMarkdown('');
+      setLessonPdfUrl('');
+      setLessonPdfName('');
     },
   });
+
+  const deleteLessonMutation = useMutation({
+    mutationFn: async (lessonId: string) => {
+      if (!courseId) return;
+      await deleteLesson(courseId, lessonId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminLessons', courseId] });
+      setShowAddLesson(null);
+      setEditingLessonId(null);
+      setLessonTitle('');
+      setYoutubeUrl('');
+      setIntroMarkdown('');
+      setLessonPdfUrl('');
+      setLessonPdfName('');
+    },
+  });
+
+  const handlePickPdfFile = () => {
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/pdf,.pdf';
+      input.onchange = async (e: any) => {
+        const file = e.target?.files?.[0];
+        if (!file) return;
+
+        setIsUploadingPdf(true);
+        const fileName = file.name || 'lesson_note.pdf';
+        setLessonPdfName(fileName);
+
+        try {
+          const cleanName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const fileRef = storageRef(storage, `lessons/${courseId}/notes/${Date.now()}_${cleanName}`);
+          await uploadBytes(fileRef, file);
+          const downloadUrl = await getDownloadURL(fileRef);
+          setLessonPdfUrl(downloadUrl);
+        } catch (err) {
+          console.error('Failed to upload PDF, fallback to local reader:', err);
+          const reader = new FileReader();
+          reader.onload = () => {
+            setLessonPdfUrl(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        } finally {
+          setIsUploadingPdf(false);
+        }
+      };
+      input.click();
+    }
+  };
 
   const handlePickQuestionFile = () => {
     if (Platform.OS === 'web') {
@@ -277,6 +354,11 @@ export default function AdminCourseEditScreen() {
           keywords: kwList,
           youtubeUrl: editYouTubeUrl.trim() || undefined,
           youtubeVideoId: vid,
+          instructorBio: editInstructorBio.trim() || undefined,
+          ownerBio: editInstructorBio.trim() || undefined,
+          status: editStatus,
+          isUnfinished: editIsUnfinished,
+          passPercentage: parseInt(editPassPercentage, 10) || 80,
         },
         courseId
       );
@@ -288,6 +370,55 @@ export default function AdminCourseEditScreen() {
       setIsEditingCourse(false);
     },
   });
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async () => {
+      if (!courseId || !course) return;
+      const next = course.status === 'published' ? 'draft' : 'published';
+      await createOrUpdateCourse({ status: next as any }, courseId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCourses'] });
+    },
+  });
+
+  const toggleUnfinishedMutation = useMutation({
+    mutationFn: async () => {
+      if (!courseId || !course) return;
+      await createOrUpdateCourse({ isUnfinished: !course.isUnfinished }, courseId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCourses'] });
+    },
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: async () => {
+      if (!courseId) return;
+      await deleteCourse(courseId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCourses'] });
+      router.replace('/admin/courses');
+    },
+  });
+
+  const handleDeleteCourse = () => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to delete "${course?.title}"? This cannot be undone.`)) {
+        deleteCourseMutation.mutate();
+      }
+    } else {
+      Alert.alert(
+        'Delete Course',
+        `Are you sure you want to delete "${course?.title}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete Course', style: 'destructive', onPress: () => deleteCourseMutation.mutate() },
+        ]
+      );
+    }
+  };
 
   if (!course) {
     return (
@@ -321,7 +452,17 @@ export default function AdminCourseEditScreen() {
                       <Text className="text-amber-300 text-xs font-bold">{course.category}</Text>
                     </View>
                   )}
-                  <Badge label={course.status?.toUpperCase() || 'PUBLISHED'} variant="success" />
+                  {course.status === 'published' ? (
+                    <Badge label="PUBLISHED" variant="success" />
+                  ) : (
+                    <Badge label="HIDDEN (DRAFT)" variant="warning" />
+                  )}
+                  {course.isUnfinished ? (
+                    <Badge label="⏳ UNFINISHED (NO CERT)" variant="warning" />
+                  ) : (
+                    <Badge label="🎓 COMPLETE" variant="success" />
+                  )}
+                  <Badge label={`PASS: ${course.passPercentage || 80}%`} variant="info" />
                 </View>
                 <Text className="text-slate-300 text-sm mt-1 mb-2">{course.body || course.description}</Text>
 
@@ -338,7 +479,37 @@ export default function AdminCourseEditScreen() {
               </View>
             </View>
 
-            <View className="flex-row items-center gap-2">
+            <View className="flex-row items-center gap-2 flex-wrap">
+              {/* Quick Hide/Unhide */}
+              <TouchableOpacity
+                onPress={() => toggleVisibilityMutation.mutate()}
+                disabled={toggleVisibilityMutation.isPending}
+                className={`px-3 py-2 rounded-xl border flex-row items-center gap-1.5 ${
+                  course.status === 'published'
+                    ? 'bg-surface-dark border-slate-700'
+                    : 'bg-emerald-950/80 border-emerald-500/60'
+                }`}
+              >
+                <Text className={`text-xs font-bold ${course.status === 'published' ? 'text-slate-300' : 'text-emerald-300'}`}>
+                  {course.status === 'published' ? '👁️ Hide Course' : '👁️ Publish Course'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Quick Mark Unfinished */}
+              <TouchableOpacity
+                onPress={() => toggleUnfinishedMutation.mutate()}
+                disabled={toggleUnfinishedMutation.isPending}
+                className={`px-3 py-2 rounded-xl border flex-row items-center gap-1.5 ${
+                  course.isUnfinished
+                    ? 'bg-emerald-950/80 border-emerald-500/60'
+                    : 'bg-amber-950/80 border-amber-500/60'
+                }`}
+              >
+                <Text className={`text-xs font-bold ${course.isUnfinished ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  {course.isUnfinished ? '✓ Mark Complete' : '⏳ Mark Unfinished'}
+                </Text>
+              </TouchableOpacity>
+
               <Button
                 title="🎨 Certificate Template"
                 variant="outline"
@@ -349,6 +520,13 @@ export default function AdminCourseEditScreen() {
                 variant={isEditingCourse ? 'secondary' : 'outline'}
                 onPress={() => setIsEditingCourse(!isEditingCourse)}
               />
+              <TouchableOpacity
+                onPress={handleDeleteCourse}
+                disabled={deleteCourseMutation.isPending}
+                className="px-3 py-2 rounded-xl bg-red-950/60 border border-red-700/60 flex-row items-center gap-1"
+              >
+                <Text className="text-xs font-bold text-red-300">🗑️ Delete</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -371,6 +549,66 @@ export default function AdminCourseEditScreen() {
           {isEditingCourse && (
             <View className="mt-4 pt-4 border-t border-surface-border">
               <Text className="text-white font-bold text-base mb-3">Edit Course Information</Text>
+
+              {/* Visibility Status Selection */}
+              <View className="mb-4">
+                <Text className="text-white text-xs font-bold mb-2">Visibility Status (Hide / Unhide)</Text>
+                <View className="flex-row gap-2">
+                  <TouchableOpacity
+                    onPress={() => setEditStatus('published')}
+                    className={`flex-1 py-2.5 px-3 rounded-xl border items-center ${
+                      editStatus === 'published'
+                        ? 'bg-emerald-950/80 border-emerald-500'
+                        : 'bg-surface-dark border-surface-border'
+                    }`}
+                  >
+                    <Text className={`text-xs font-bold ${editStatus === 'published' ? 'text-emerald-300' : 'text-slate-400'}`}>
+                      ✓ Published (Visible to Students)
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setEditStatus('draft')}
+                    className={`flex-1 py-2.5 px-3 rounded-xl border items-center ${
+                      editStatus === 'draft'
+                        ? 'bg-amber-950/80 border-amber-500'
+                        : 'bg-surface-dark border-surface-border'
+                    }`}
+                  >
+                    <Text className={`text-xs font-bold ${editStatus === 'draft' ? 'text-amber-300' : 'text-slate-400'}`}>
+                      👁️ Hidden / Draft (Admin Only)
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Unfinished Course Toggle */}
+              <TouchableOpacity
+                onPress={() => setEditIsUnfinished(!editIsUnfinished)}
+                className={`mb-4 p-3.5 rounded-xl border flex-row items-center gap-3 ${
+                  editIsUnfinished
+                    ? 'bg-amber-950/60 border-amber-500/70'
+                    : 'bg-surface-dark border-surface-border'
+                }`}
+              >
+                <View
+                  className={`w-6 h-6 rounded-md items-center justify-center border ${
+                    editIsUnfinished
+                      ? 'bg-amber-500 border-amber-400'
+                      : 'border-slate-600 bg-surface-card'
+                  }`}
+                >
+                  {editIsUnfinished && <Text className="text-black font-extrabold text-xs">✓</Text>}
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-xs">
+                    Mark as Unfinished Course (Block Certificate Issuance)
+                  </Text>
+                  <Text className="text-slate-400 text-[11px] mt-0.5">
+                    Students can view and practice released lessons, but no certificates will be issued until marked complete.
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
               <Input
                 label="Course Title"
                 value={editTitle}
@@ -393,12 +631,28 @@ export default function AdminCourseEditScreen() {
               />
 
               <Input
+                label="Pass Percentage Required for Certificate (Default: 80%)"
+                value={editPassPercentage}
+                onChangeText={setEditPassPercentage}
+                placeholder="80"
+                keyboardType="numeric"
+              />
+
+              <Input
                 label="Course Body & Detailed Syllabus"
                 value={editBody}
                 onChangeText={setEditBody}
                 placeholder="Full course content..."
                 multiline
                 numberOfLines={4}
+              />
+              <Input
+                label="Teacher Short Bio (Displayed on the other half of Catalogue Box)"
+                value={editInstructorBio}
+                onChangeText={setEditInstructorBio}
+                placeholder="1-2 sentences about teacher credentials..."
+                multiline
+                numberOfLines={2}
               />
               <Input
                 label="Keywords / Tags (comma-separated)"
@@ -434,6 +688,22 @@ export default function AdminCourseEditScreen() {
                   onPress={() => setIsEditingCourse(false)}
                 />
               </View>
+
+              {/* Danger Zone */}
+              <View className="mt-6 pt-4 border-t border-red-900/40">
+                <Text className="text-red-400 font-bold text-xs mb-2">Danger Zone</Text>
+                <TouchableOpacity
+                  onPress={handleDeleteCourse}
+                  disabled={deleteCourseMutation.isPending}
+                  className="p-3 rounded-xl bg-red-950/50 border border-red-800/60 flex-row justify-between items-center"
+                >
+                  <View>
+                    <Text className="text-red-300 font-bold text-xs">Delete Entire Course</Text>
+                    <Text className="text-slate-400 text-[11px]">Permanently removes this course, modules, lessons and question bank</Text>
+                  </View>
+                  <Text className="text-red-400 font-bold text-xs">🗑️ Delete</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </Card>
@@ -461,7 +731,31 @@ export default function AdminCourseEditScreen() {
 
               {isAdding && (
                 <View className="bg-slate-900/90 p-4 rounded-xl mb-4 border border-surface-border">
-                  <Text className="text-white font-semibold mb-2">New Lesson</Text>
+                  <View className="flex-row justify-between items-center mb-2">
+                    <Text className="text-white font-semibold">
+                      {editingLessonId ? '✏️ Edit Lesson' : '➕ New Lesson'}
+                    </Text>
+                    {editingLessonId && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (Platform.OS === 'web') {
+                            if (window.confirm('Are you sure you want to delete this lesson?')) {
+                              deleteLessonMutation.mutate(editingLessonId);
+                            }
+                          } else {
+                            Alert.alert('Delete Lesson', 'Are you sure?', [
+                              { text: 'Cancel', style: 'cancel' },
+                              { text: 'Delete', style: 'destructive', onPress: () => deleteLessonMutation.mutate(editingLessonId) },
+                            ]);
+                          }
+                        }}
+                        className="bg-red-600/30 border border-red-500/50 px-2.5 py-1 rounded"
+                      >
+                        <Text className="text-red-300 text-xs font-bold">🗑️ Delete Lesson</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
                   <Input
                     label="Lesson Title"
                     value={lessonTitle}
@@ -482,11 +776,95 @@ export default function AdminCourseEditScreen() {
                     multiline
                     numberOfLines={3}
                   />
-                  <Button
-                    title="Save Lesson"
-                    onPress={() => addLessonMutation.mutate(m.id!)}
-                    loading={addLessonMutation.isPending}
-                  />
+
+                  {/* PDF Attachment Section */}
+                  <View className="mb-4 p-3 bg-slate-950/70 rounded-xl border border-slate-700">
+                    <Text className="text-white font-semibold text-xs mb-1">
+                      📄 Lesson PDF Note / Study Guide (Optional)
+                    </Text>
+                    <Text className="text-slate-400 text-[11px] mb-3 leading-4">
+                      Attach a PDF document (summary, slides, cheat sheet) for students to download and study.
+                    </Text>
+
+                    {lessonPdfUrl ? (
+                      <View className="flex-row items-center justify-between p-2.5 bg-emerald-950/40 border border-emerald-500/40 rounded-lg mb-3">
+                        <View className="flex-row items-center gap-2 flex-1 mr-2">
+                          <Text style={{ fontSize: 18 }}>📄</Text>
+                          <View className="flex-1">
+                            <Text className="text-emerald-300 font-semibold text-xs" numberOfLines={1}>
+                              {lessonPdfName || 'Attached PDF Document'}
+                            </Text>
+                            <Text className="text-slate-400 text-[10px]" numberOfLines={1}>
+                              {lessonPdfUrl.startsWith('data:') ? 'Base64 document attached' : lessonPdfUrl}
+                            </Text>
+                          </View>
+                        </View>
+                        <View className="flex-row gap-2">
+                          <TouchableOpacity
+                            onPress={() => {
+                              if (Platform.OS === 'web') window.open(lessonPdfUrl, '_blank');
+                              else Linking.openURL(lessonPdfUrl);
+                            }}
+                            className="bg-blue-600 px-2.5 py-1 rounded"
+                          >
+                            <Text className="text-white text-xs font-bold">View</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => {
+                              setLessonPdfUrl('');
+                              setLessonPdfName('');
+                            }}
+                            className="bg-red-600 px-2.5 py-1 rounded"
+                          >
+                            <Text className="text-white text-xs font-bold">Remove</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : null}
+
+                    <View className="flex-row gap-2 items-center flex-wrap">
+                      <Button
+                        title={isUploadingPdf ? 'Uploading PDF...' : '📁 Upload PDF File'}
+                        variant="secondary"
+                        onPress={handlePickPdfFile}
+                        disabled={isUploadingPdf}
+                      />
+                      <Text className="text-slate-500 text-xs">or enter direct link:</Text>
+                    </View>
+
+                    <Input
+                      value={lessonPdfUrl.startsWith('data:') ? '[Uploaded PDF File]' : lessonPdfUrl}
+                      onChangeText={(val) => {
+                        setLessonPdfUrl(val);
+                        if (val && !lessonPdfName) {
+                          setLessonPdfName('Lesson_Notes.pdf');
+                        }
+                      }}
+                      placeholder="https://.../notes.pdf"
+                      className="mt-2"
+                    />
+                  </View>
+
+                  <View className="flex-row gap-2 justify-end">
+                    <Button
+                      title="Cancel"
+                      variant="outline"
+                      onPress={() => {
+                        setShowAddLesson(null);
+                        setEditingLessonId(null);
+                        setLessonTitle('');
+                        setYoutubeUrl('');
+                        setIntroMarkdown('');
+                        setLessonPdfUrl('');
+                        setLessonPdfName('');
+                      }}
+                    />
+                    <Button
+                      title={editingLessonId ? 'Update Lesson' : 'Save Lesson'}
+                      onPress={() => addLessonMutation.mutate(m.id!)}
+                      loading={addLessonMutation.isPending}
+                    />
+                  </View>
                 </View>
               )}
 
@@ -500,9 +878,43 @@ export default function AdminCourseEditScreen() {
                   >
                     <View className="flex-1 mr-2">
                       <Text className="text-white font-semibold text-base">{les.title}</Text>
-                      <Text className="text-xs text-slate-400">YouTube ID: {les.youtubeVideoId}</Text>
+                      <View className="flex-row items-center gap-3 mt-1 flex-wrap">
+                        <Text className="text-xs text-slate-400">YouTube ID: {les.youtubeVideoId}</Text>
+                        {les.pdfUrl ? (
+                          <TouchableOpacity
+                            onPress={() => {
+                              if (Platform.OS === 'web') window.open(les.pdfUrl, '_blank');
+                              else Linking.openURL(les.pdfUrl!);
+                            }}
+                            className="flex-row items-center gap-1 bg-red-950/60 border border-red-500/40 px-2 py-0.5 rounded"
+                          >
+                            <Text style={{ fontSize: 10 }}>📄</Text>
+                            <Text className="text-red-300 text-[10px] font-bold">
+                              PDF: {les.pdfName || 'Download Note'}
+                            </Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text className="text-slate-500 text-[10px] italic">No PDF note</Text>
+                        )}
+                      </View>
                     </View>
-                    <Badge label="PUBLISHED" variant="success" />
+                    <View className="flex-row items-center gap-2">
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowAddLesson(m.id!);
+                          setEditingLessonId(les.id || null);
+                          setLessonTitle(les.title);
+                          setYoutubeUrl(les.youtubeVideoId ? `https://www.youtube.com/watch?v=${les.youtubeVideoId}` : '');
+                          setIntroMarkdown(les.introMarkdown || '');
+                          setLessonPdfUrl(les.pdfUrl || '');
+                          setLessonPdfName(les.pdfName || '');
+                        }}
+                        className="bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded border border-slate-600"
+                      >
+                        <Text className="text-white text-xs font-semibold">✏️ Edit</Text>
+                      </TouchableOpacity>
+                      <Badge label="PUBLISHED" variant="success" />
+                    </View>
                   </View>
                 ))
               )}

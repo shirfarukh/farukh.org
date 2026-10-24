@@ -340,8 +340,8 @@ export async function saveModuleExamResult(
 
   // Pass threshold is 80% or retained if already passed previously
   const passed = score >= 80 || existingRecord?.passed === true;
-  // Module is marked as finished when passing score (>= 80%) is achieved
-  const finished = passed;
+  // Module is marked as finished when module test answers are submitted
+  const finished = true;
 
   const record: ModuleExamRecord = {
     score,

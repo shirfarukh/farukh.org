@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { updateProfile } from '@firebase/auth';
+import { updateProfile } from 'firebase/auth';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenWrapper } from '../../src/components/ui/ScreenWrapper';
 import { Card } from '../../src/components/ui/Card';
@@ -15,11 +15,12 @@ import { ThemeToggle } from '../../src/components/ui/ThemeToggle';
 import { doc, setDoc } from '@firebase/firestore';
 import { db } from '../../src/lib/firebase';
 import { getUserCertificates } from '../../src/features/certificates/certificatesApi';
+import { getInstructorApplication } from '../../src/features/instructor/instructorApi';
 import { useTranslation } from 'react-i18next';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, isInstructor, role, instructorMode, setInstructorMode, logout } = useAuth();
   const { colors, isDark } = useTheme();
   const { t, i18n } = useTranslation();
   const isPersian = i18n.language === 'fa';
@@ -34,6 +35,13 @@ export default function ProfileScreen() {
     queryKey: ['userCertificates', user?.uid],
     queryFn: () => (user?.uid ? getUserCertificates(user.uid) : Promise.resolve([])),
     enabled: !!user?.uid,
+  });
+
+  // Fetch instructor application if student
+  const { data: instructorApp } = useQuery({
+    queryKey: ['instructorApplication', user?.uid],
+    queryFn: () => (user?.uid ? getInstructorApplication(user.uid) : Promise.resolve(null)),
+    enabled: !!user?.uid && !isAdmin && !isInstructor,
   });
 
   const handleSave = async () => {
@@ -74,8 +82,154 @@ export default function ProfileScreen() {
               {user?.email}
             </Text>
           </View>
-          <Badge label={isAdmin ? 'ADMIN' : 'STUDENT'} variant={isAdmin ? 'warning' : 'info'} />
+          <Badge
+            label={isAdmin ? 'ADMIN' : isInstructor ? 'INSTRUCTOR' : 'STUDENT'}
+            variant={isAdmin ? 'warning' : isInstructor ? 'success' : 'info'}
+          />
         </View>
+
+        {/* 🎓 INSTRUCTOR PORTAL CARD (FOR INSTRUCTORS & ADMINS) */}
+        {(isInstructor || isAdmin) && (
+          <Card
+            style={{
+              backgroundColor: isDark ? 'rgba(30, 58, 138, 0.25)' : '#EFF6FF',
+              borderColor: isDark ? '#3B82F6' : '#BFDBFE',
+              borderWidth: 1.5,
+              padding: 16,
+              marginBottom: 18,
+              borderRadius: 20,
+            }}
+          >
+            <View className="flex-row items-center justify-between mb-3">
+              <View className="flex-row items-center gap-2.5">
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    backgroundColor: isDark ? '#1E3A8A' : '#DBEAFE',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>👨‍🏫</Text>
+                </View>
+                <View>
+                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>
+                    {isPersian ? 'پنل مربیگری و ساخت دوره' : 'Instructor Workspace'}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                    {isPersian ? 'مدیریت دوره‌ها، سرفصل‌ها و آزمون‌ها' : 'Manage your courses, drafts & student metrics'}
+                  </Text>
+                </View>
+              </View>
+              <Badge label={isPersian ? 'فعال' : 'ACTIVE'} variant="success" />
+            </View>
+
+            <TouchableOpacity
+              onPress={() => router.push('/instructor' as any)}
+              style={{
+                backgroundColor: colors.primary,
+                borderRadius: 12,
+                paddingVertical: 10,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 6,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
+                🚀 {isPersian ? 'ورود به پنل مربیگری' : 'Open Instructor Portal'} →
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        )}
+
+        {/* 🚀 BECOME AN INSTRUCTOR CARD (FOR STUDENTS) */}
+        {!isAdmin && !isInstructor && (
+          <Card
+            style={{
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.75)' : '#FFFFFF',
+              borderColor: instructorApp?.status === 'pending'
+                ? colors.goldBorder
+                : instructorApp?.status === 'changes_requested'
+                ? '#F59E0B'
+                : colors.cardBorder,
+              borderWidth: 1.5,
+              padding: 16,
+              marginBottom: 18,
+              borderRadius: 20,
+            }}
+          >
+            <View className="flex-row items-center justify-between mb-2">
+              <View className="flex-row items-center gap-2.5">
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    backgroundColor: colors.goldBg,
+                    borderWidth: 1,
+                    borderColor: colors.goldBorder,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>✨</Text>
+                </View>
+                <View>
+                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>
+                    {isPersian ? 'مربی شوید و تدریس کنید' : 'Become an Instructor'}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                    {instructorApp?.status === 'pending'
+                      ? isPersian ? 'درخواست شما در حال بررسی آکادمیک است' : 'Application under academic review'
+                      : instructorApp?.status === 'changes_requested'
+                      ? isPersian ? 'نیاز به بازنگری مدارک' : 'Action needed on application'
+                      : isPersian ? 'دانش خود را با هزاران دانش‌آموز به اشتراک بگذارید' : 'Teach courses & inspire students'}
+                  </Text>
+                </View>
+              </View>
+
+              {instructorApp && (
+                <Badge
+                  label={
+                    instructorApp.status === 'pending'
+                      ? 'IN REVIEW'
+                      : instructorApp.status === 'changes_requested'
+                      ? 'ACTION REQ'
+                      : 'APPLIED'
+                  }
+                  variant={instructorApp.status === 'pending' ? 'warning' : 'info'}
+                />
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => router.push('/(student)/become-instructor' as any)}
+              style={{
+                marginTop: 8,
+                backgroundColor: isDark ? '#334155' : '#F1F5F9',
+                borderRadius: 12,
+                paddingVertical: 9,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 6,
+                borderWidth: 1,
+                borderColor: colors.cardBorder,
+              }}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12 }}>
+                {instructorApp?.status === 'pending'
+                  ? isPersian ? 'مشاهده جزئیات درخواست ⏳' : 'View Application Status ⏳'
+                  : instructorApp?.status === 'changes_requested'
+                  ? isPersian ? 'اصلاح و ارسال مجدد ✏️' : 'Update Application ✏️'
+                  : isPersian ? 'تکمیل فرم درخواست مربی‌گری 🚀' : 'Apply to Teach 🚀'}
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        )}
 
         {message ? (
           <View

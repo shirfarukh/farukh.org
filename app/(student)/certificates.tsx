@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { ScreenWrapper } from '../../src/components/ui/ScreenWrapper';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
 import { Badge } from '../../src/components/ui/Badge';
+import { CertificateViewer } from '../../src/components/CertificateViewer';
 import { useAuth } from '../../src/features/auth/useAuth';
 import { useTheme } from '../../src/features/theme/ThemeContext';
 import { getUserCertificates } from '../../src/features/certificates/certificatesApi';
@@ -19,6 +20,7 @@ export default function MyCertificatesScreen() {
   const router = useRouter();
   const { i18n } = useTranslation();
   const isPersian = i18n.language?.startsWith('fa');
+  const [expandedCertId, setExpandedCertId] = useState<string | null>(null);
 
   const { data: certificates = [], isLoading } = useQuery({
     queryKey: ['userCertificates', user?.uid],
@@ -140,11 +142,26 @@ export default function MyCertificatesScreen() {
                       />
                     )}
                     <Button
+                      title={
+                        expandedCertId === certId
+                          ? isPersian ? 'بستن تصویر ✕' : 'Close Preview ✕'
+                          : isPersian ? 'نمایش تصدیق‌نامه 📜' : 'View Certificate 📜'
+                      }
+                      variant="outline"
+                      onPress={() => setExpandedCertId(expandedCertId === certId ? null : certId)}
+                    />
+                    <Button
                       title={isPersian ? 'استعلام عمومی' : 'Public Verification'}
                       variant="secondary"
                       onPress={() => router.push(`/verify/${certId}` as any)}
                     />
                   </View>
+
+                  {expandedCertId === certId && (
+                    <View style={{ marginTop: 12, width: '100%', borderTopWidth: 1, borderTopColor: colors.cardBorder, paddingTop: 12 }}>
+                      <CertificateViewer certificate={item} />
+                    </View>
+                  )}
                 </Card>
               );
             }}

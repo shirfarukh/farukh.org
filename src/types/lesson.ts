@@ -10,6 +10,8 @@ export const LessonSchema = z.object({
   durationSec: z.number().default(300),
   quizPassPercentage: z.number().min(1).max(100).default(70),
   status: z.enum(['draft', 'published']).default('published'),
+  pdfUrl: z.string().optional(),
+  pdfName: z.string().optional(),
 });
 
 export type Lesson = z.infer<typeof LessonSchema>;

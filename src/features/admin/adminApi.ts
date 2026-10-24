@@ -36,6 +36,18 @@ export async function deleteCourse(courseId: string): Promise<void> {
   await deleteDoc(doc(db, 'courses', courseId));
 }
 
+export async function toggleCourseVisibility(courseId: string, currentStatus: string): Promise<string> {
+  const nextStatus = currentStatus === 'published' ? 'draft' : 'published';
+  await createOrUpdateCourse({ status: nextStatus as any }, courseId);
+  return nextStatus;
+}
+
+export async function toggleCourseUnfinished(courseId: string, currentIsUnfinished: boolean): Promise<boolean> {
+  const next = !currentIsUnfinished;
+  await createOrUpdateCourse({ isUnfinished: next }, courseId);
+  return next;
+}
+
 // Modules & Lessons
 export async function getCourseModules(courseId: string): Promise<Module[]> {
   const q = query(collection(db, 'courses', courseId, 'modules'), orderBy('order', 'asc'));
@@ -65,6 +77,10 @@ export async function createOrUpdateLesson(
     : doc(collection(db, 'courses', courseId, 'lessons'));
   await setDoc(ref, cleanFirestoreData(lessonData), { merge: true });
   return ref.id;
+}
+
+export async function deleteLesson(courseId: string, lessonId: string): Promise<void> {
+  await deleteDoc(doc(db, 'courses', courseId, 'lessons', lessonId));
 }
 
 // Lesson Quiz Questions & Answer Keys

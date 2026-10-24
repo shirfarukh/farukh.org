@@ -1,5 +1,5 @@
 import { ref, onValue, set, onDisconnect, serverTimestamp, off, Database } from '@firebase/database';
-import { Auth, User } from '@firebase/auth';
+import { Auth, User } from 'firebase/auth';
 
 /**
  * Sets up an online/offline presence system for a user.

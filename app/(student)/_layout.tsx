@@ -18,7 +18,7 @@ export default function StudentLayout() {
 }
 
 function StudentLayoutContent() {
-  const { user, isAdmin, loading, logout } = useAuth();
+  const { user, isAdmin, isInstructor, loading, logout } = useAuth();
   const { isDark, colors } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -40,9 +40,17 @@ function StudentLayoutContent() {
   const isWeb = Platform.OS === 'web';
 
   const navItems = [
-    { label: t('catalog', 'Course Catalog'), path: '/(student)', icon: '📚' },
+    { label: isPersian ? 'دوره‌های آموزشی' : 'Courses', path: '/(student)', icon: '📚' },
+    {
+      label: isPersian ? 'مکتب رسمی دختران' : 'Girls Academic School',
+      path: '/(student)/school',
+      icon: '🎓',
+      special: true,
+      badge: isPersian ? 'صنوف ۷-۱۲' : 'Grades 7–12',
+    },
     { label: t('community', 'Community'), path: '/(student)/community', icon: '💬' },
     { label: t('blog', 'Blog & Insights'), path: '/(student)/blog', icon: '✍️' },
+    { label: t('about', 'About Us'), path: '/(student)/about', icon: '🏛️' },
     { label: t('profile', 'Profile & Account'), path: '/(student)/profile', icon: '👤', protected: true },
   ];
 
@@ -146,19 +154,37 @@ function StudentLayoutContent() {
                     }}
                   >
                     <Text style={{ fontSize: 18 }}>{item.icon}</Text>
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        fontWeight: active ? '700' : '600',
-                        color: active
-                          ? isDark
-                            ? '#FFFFFF'
-                            : colors.primary
-                          : colors.textSecondary,
-                      }}
-                    >
-                      {item.label}
-                    </Text>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: active ? '700' : '600',
+                          color: active
+                            ? isDark
+                              ? '#FFFFFF'
+                              : colors.primary
+                            : colors.textSecondary,
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                      {item.special && (
+                        <View
+                          style={{
+                            backgroundColor: isDark ? 'rgba(250, 204, 21, 0.15)' : 'rgba(250, 204, 21, 0.2)',
+                            borderColor: colors.goldBorder,
+                            borderWidth: 1,
+                            borderRadius: 99,
+                            paddingHorizontal: 7,
+                            paddingVertical: 2,
+                          }}
+                        >
+                          <Text style={{ color: colors.gold, fontSize: 9.5, fontWeight: '800' }}>
+                            {isPersian ? 'اختصاصی' : 'SPECIAL'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -185,6 +211,48 @@ function StudentLayoutContent() {
                   >
                     <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 13 }}>⚡ Admin Dashboard</Text>
                     <Text style={{ color: colors.gold, fontWeight: '900' }}>→</Text>
+                  </TouchableOpacity>
+                )}
+                {(isInstructor || isAdmin) && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/instructor' as any)}
+                    style={{
+                      padding: 12,
+                      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
+                      borderWidth: 1,
+                      borderColor: isDark ? '#3B82F6' : '#93C5FD',
+                      borderRadius: 14,
+                      marginBottom: 6,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontWeight: '800', fontSize: 13 }}>
+                      🎓 {isPersian ? 'پنل مربیگری' : 'Instructor Portal'}
+                    </Text>
+                    <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontWeight: '900' }}>→</Text>
+                  </TouchableOpacity>
+                )}
+                {!isAdmin && !isInstructor && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/(student)/become-instructor' as any)}
+                    style={{
+                      padding: 10,
+                      backgroundColor: colors.cardHover,
+                      borderWidth: 1,
+                      borderColor: colors.cardBorder,
+                      borderRadius: 14,
+                      marginBottom: 6,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12 }}>
+                      ✨ {isPersian ? 'مربی شوید' : 'Teach on FARUKH'}
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>→</Text>
                   </TouchableOpacity>
                 )}
                 <View
@@ -546,19 +614,37 @@ function StudentLayoutContent() {
                     }}
                   >
                     <Text style={{ fontSize: 16 }}>{item.icon}</Text>
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: active ? '700' : '600',
-                        color: active
-                          ? isDark
-                            ? '#FFFFFF'
-                            : colors.primary
-                          : colors.textSecondary,
-                      }}
-                    >
-                      {item.label}
-                    </Text>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: active ? '700' : '600',
+                          color: active
+                            ? isDark
+                              ? '#FFFFFF'
+                              : colors.primary
+                            : colors.textSecondary,
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                      {item.special && (
+                        <View
+                          style={{
+                            backgroundColor: isDark ? 'rgba(250, 204, 21, 0.15)' : 'rgba(250, 204, 21, 0.2)',
+                            borderColor: colors.goldBorder,
+                            borderWidth: 1,
+                            borderRadius: 99,
+                            paddingHorizontal: 7,
+                            paddingVertical: 1.5,
+                          }}
+                        >
+                          <Text style={{ color: colors.gold, fontSize: 9, fontWeight: '800' }}>
+                            {isPersian ? 'اختصاصی' : 'SPECIAL'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -583,6 +669,46 @@ function StudentLayoutContent() {
                   >
                     <Text style={{ color: colors.gold, fontWeight: '800', textAlign: 'center', fontSize: 13 }}>
                       ⚡ Admin Panel →
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {(isInstructor || isAdmin) && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setMobileMenuOpen(false);
+                      router.push('/instructor' as any);
+                    }}
+                    style={{
+                      padding: 12,
+                      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF',
+                      borderWidth: 1,
+                      borderColor: isDark ? '#3B82F6' : '#93C5FD',
+                      borderRadius: 12,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontWeight: '800', textAlign: 'center', fontSize: 13 }}>
+                      🎓 {isPersian ? 'پنل مربیگری' : 'Instructor Portal'} →
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {!isAdmin && !isInstructor && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setMobileMenuOpen(false);
+                      router.push('/(student)/become-instructor' as any);
+                    }}
+                    style={{
+                      padding: 10,
+                      backgroundColor: colors.cardHover,
+                      borderWidth: 1,
+                      borderColor: colors.cardBorder,
+                      borderRadius: 12,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '700', textAlign: 'center', fontSize: 12 }}>
+                      ✨ {isPersian ? 'مربی شوید (ارسال درخواست)' : 'Teach on FARUKH (Apply)'}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -621,9 +747,11 @@ function StudentLayoutContent() {
             }}
           >
             <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="school" options={{ headerShown: false }} />
             <Stack.Screen name="community/index" options={{ headerShown: false }} />
             <Stack.Screen name="blog/index" options={{ headerShown: false }} />
             <Stack.Screen name="blog/[blogId]" options={{ headerShown: false }} />
+            <Stack.Screen name="about" options={{ headerShown: false }} />
             <Stack.Screen name="course/[courseId]" options={{ headerShown: false }} />
             <Stack.Screen name="lesson/[courseId]/[lessonId]" options={{ headerShown: false }} />
             <Stack.Screen name="exam/[courseId]" options={{ headerShown: false }} />

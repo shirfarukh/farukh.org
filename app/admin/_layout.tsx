@@ -38,6 +38,8 @@ export default function AdminLayout() {
       <Stack.Screen name="blog/index" options={{ title: 'Blog & Articles Studio' }} />
       <Stack.Screen name="courses/index" options={{ title: 'Manage Courses' }} />
       <Stack.Screen name="courses/[courseId]" options={{ title: 'Edit Course' }} />
+      <Stack.Screen name="instructor-applications/index" options={{ title: 'Instructor Applications' }} />
+      <Stack.Screen name="reviews/index" options={{ title: 'Course Review Queue' }} />
     </Stack>
   );
 }

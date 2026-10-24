@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView, Image, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenWrapper } from '../../src/components/ui/ScreenWrapper';
 import { Card } from '../../src/components/ui/Card';
 import { Badge } from '../../src/components/ui/Badge';
 import { AppLogo } from '../../src/components/ui/AppLogo';
+import { CertificateViewer } from '../../src/components/CertificateViewer';
 import { useTheme } from '../../src/features/theme/ThemeContext';
 import { verifyCertificateCallable } from '../../src/features/certificates/certificatesApi';
 
@@ -248,6 +249,9 @@ export default function VerifyCertificateScreen() {
             </View>
           </View>
 
+          {/* Visual Certificate Graphic with Official Template & Black QR Code */}
+          <CertificateViewer certificate={cert} />
+
           {/* Accreditation Footer */}
           <View
             style={{
@@ -256,6 +260,7 @@ export default function VerifyCertificateScreen() {
               borderWidth: 1,
               borderRadius: 14,
               padding: 14,
+              marginBottom: 16,
             }}
             className="flex-row items-center gap-3"
           >
@@ -271,6 +276,22 @@ export default function VerifyCertificateScreen() {
               </Text>
             </View>
           </View>
+
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              onPress={() => window.print()}
+              style={{
+                backgroundColor: colors.gold,
+                paddingVertical: 12,
+                borderRadius: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#0F172A', fontWeight: 'bold', fontSize: 14 }}>
+                {isPersian ? 'چاپ یا دریافت نسخه رسمی گواهینامه 🖨️' : 'Print / Download Official Certificate 🖨️'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </Card>
       </ScrollView>
     </ScreenWrapper>

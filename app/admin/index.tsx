@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -10,10 +10,17 @@ import { Input } from '../../src/components/ui/Input';
 import { Badge } from '../../src/components/ui/Badge';
 import { AppLogo } from '../../src/components/ui/AppLogo';
 import { LanguageSwitcher } from '../../src/components/ui/LanguageSwitcher';
-import { getAdminCourses, createOrUpdateCourse, deleteCourse } from '../../src/features/admin/adminApi';
+import {
+  getAdminCourses,
+  createOrUpdateCourse,
+  deleteCourse,
+  toggleCourseVisibility,
+  toggleCourseUnfinished,
+} from '../../src/features/admin/adminApi';
 import { extractYouTubeId } from '../../src/lib/utils';
 import { CategorySelector } from '../../src/components/ui/CategorySelector';
 import { CourseImageInput } from '../../src/components/ui/CourseImageInput';
+import { getPendingApplications, getReviewRequests } from '../../src/features/instructor/instructorApi';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
@@ -26,10 +33,13 @@ export default function AdminDashboardScreen() {
   const [faTitle, setFaTitle] = useState('');
   const [category, setCategory] = useState<string>('Stocks & Crypto');
   const [coverUrl, setCoverUrl] = useState('');
+  const [instructorBio, setInstructorBio] = useState('');
   const [description, setDescription] = useState('');
   const [body, setBody] = useState('');
   const [keywordsInput, setKeywordsInput] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [status, setStatus] = useState<'published' | 'draft'>('published');
+  const [isUnfinished, setIsUnfinished] = useState(false);
   const [formError, setFormError] = useState('');
   const [createdSuccessId, setCreatedSuccessId] = useState<string | null>(null);
 
@@ -43,6 +53,19 @@ export default function AdminDashboardScreen() {
     queryKey: ['adminCourses'],
     queryFn: getAdminCourses,
   });
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ['adminInstructorApplications'],
+    queryFn: getPendingApplications,
+  });
+
+  const { data: reviewRequests = [] } = useQuery({
+    queryKey: ['adminReviewRequests'],
+    queryFn: getReviewRequests,
+  });
+
+  const pendingAppsCount = applications.filter((a) => a.status === 'pending').length;
+  const pendingReviewsCount = reviewRequests.filter((r) => r.status === 'pending').length;
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -69,7 +92,10 @@ export default function AdminDashboardScreen() {
         keywords: keywordsList,
         youtubeUrl: youtubeUrl.trim() || undefined,
         youtubeVideoId: videoId,
-        status: 'published',
+        instructorBio: instructorBio.trim() || undefined,
+        ownerBio: instructorBio.trim() || undefined,
+        status,
+        isUnfinished,
         passPercentage: 80,
         exam: { questionCount: 10, timeLimitMin: 30, maxAttempts: 3, cooldownHours: 24 },
         order: courses.length + 1,
@@ -84,16 +110,63 @@ export default function AdminDashboardScreen() {
       setFaTitle('');
       setCategory('Stocks & Crypto');
       setCoverUrl('');
+      setInstructorBio('');
       setDescription('');
       setBody('');
       setKeywordsInput('');
       setYoutubeUrl('');
+      setStatus('published');
+      setIsUnfinished(false);
       setFormError('');
     },
     onError: (err: any) => {
       setFormError(err.message || 'Failed to create course');
     },
   });
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: string }) => {
+      await toggleCourseVisibility(id, currentStatus);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCourses'] });
+    },
+  });
+
+  const toggleUnfinishedMutation = useMutation({
+    mutationFn: async ({ id, currentIsUnfinished }: { id: string; currentIsUnfinished: boolean }) => {
+      await toggleCourseUnfinished(id, currentIsUnfinished);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCourses'] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await deleteCourse(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCourses'] });
+    },
+  });
+
+  const handleDeleteCourse = (id: string, courseTitle: string) => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to delete "${courseTitle}"? This cannot be undone.`)) {
+        deleteMutation.mutate(id);
+      }
+    } else {
+      Alert.alert(
+        'Delete Course',
+        `Are you sure you want to delete "${courseTitle}"? This will permanently remove the course and its contents.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
+        ]
+      );
+    }
+  };
 
   return (
     <ScreenWrapper>
@@ -144,7 +217,7 @@ export default function AdminDashboardScreen() {
                 backgroundColor: '#1E293B',
                 borderColor: '#3B82F6',
                 borderWidth: 1,
-                paddingHorizontal: 14,
+                paddingHorizontal: 12,
                 paddingVertical: 10,
                 borderRadius: 14,
                 alignItems: 'center',
@@ -156,19 +229,67 @@ export default function AdminDashboardScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              onPress={() => router.push('/admin/instructor-applications' as any)}
+              style={{
+                backgroundColor: '#1E293B',
+                borderColor: pendingAppsCount > 0 ? '#F59E0B' : '#334155',
+                borderWidth: 1,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                borderRadius: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Text style={{ color: '#FCD34D', fontWeight: '800', fontSize: 13 }}>
+                👨‍🏫 {isPersian ? 'متقاضیان مربی‌گری' : 'Instructor Apps'}
+              </Text>
+              {pendingAppsCount > 0 && (
+                <View style={{ backgroundColor: '#F59E0B', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 }}>
+                  <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 11 }}>{pendingAppsCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/admin/reviews' as any)}
+              style={{
+                backgroundColor: '#1E293B',
+                borderColor: pendingReviewsCount > 0 ? '#10B981' : '#334155',
+                borderWidth: 1,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                borderRadius: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Text style={{ color: '#34D399', fontWeight: '800', fontSize: 13 }}>
+                📋 {isPersian ? 'صف بازبینی دوره‌ها' : 'Course Reviews'}
+              </Text>
+              {pendingReviewsCount > 0 && (
+                <View style={{ backgroundColor: '#10B981', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 }}>
+                  <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 11 }}>{pendingReviewsCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
               onPress={() => router.push('/admin/blog' as any)}
               style={{
                 backgroundColor: '#1E293B',
                 borderColor: '#FACC15',
                 borderWidth: 1,
-                paddingHorizontal: 14,
+                paddingHorizontal: 12,
                 paddingVertical: 10,
                 borderRadius: 14,
                 alignItems: 'center',
               }}
             >
               <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 13 }}>
-                ✍️ {isPersian ? 'استودیو وبلاگ' : 'Blog Studio'}
+                ✍️ {isPersian ? 'وبلاگ' : 'Blog'}
               </Text>
             </TouchableOpacity>
 
@@ -234,7 +355,10 @@ export default function AdminDashboardScreen() {
                   {isPersian ? 'اطلاعات، متن، کلیدواژه‌ها و لینک یوتیوب دوره را وارد نمایید' : 'Enter course title, body content, keywords, and optional YouTube link'}
                 </Text>
               </View>
-              <Badge label="STATUS: PUBLISHED" variant="success" />
+              <View className="flex-row items-center gap-1.5">
+                <Badge label={status.toUpperCase()} variant={status === 'published' ? 'success' : 'warning'} />
+                {isUnfinished && <Badge label="UNFINISHED" variant="warning" />}
+              </View>
             </View>
 
             {formError ? (
@@ -242,6 +366,71 @@ export default function AdminDashboardScreen() {
                 <Text className="text-red-300 text-xs font-semibold">{formError}</Text>
               </View>
             ) : null}
+
+            {/* Visibility Status Selection */}
+            <View className="mb-4">
+              <Text className="text-white text-xs font-bold mb-2">
+                {isPersian ? 'وضعیت انتشار و دیداری (مخفی یا عمومی)' : 'Visibility Status (Hide / Unhide)'}
+              </Text>
+              <View className="flex-row gap-2">
+                <TouchableOpacity
+                  onPress={() => setStatus('published')}
+                  className={`flex-1 py-2.5 px-3 rounded-xl border items-center ${
+                    status === 'published'
+                      ? 'bg-emerald-950/80 border-emerald-500'
+                      : 'bg-surface-dark border-surface-border'
+                  }`}
+                >
+                  <Text className={`text-xs font-bold ${status === 'published' ? 'text-emerald-300' : 'text-slate-400'}`}>
+                    ✓ {isPersian ? 'منتشر شده (قابل مشاهده دانشجویان)' : 'Published (Visible to Students)'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setStatus('draft')}
+                  className={`flex-1 py-2.5 px-3 rounded-xl border items-center ${
+                    status === 'draft'
+                      ? 'bg-amber-950/80 border-amber-500'
+                      : 'bg-surface-dark border-surface-border'
+                  }`}
+                >
+                  <Text className={`text-xs font-bold ${status === 'draft' ? 'text-amber-300' : 'text-slate-400'}`}>
+                    👁️ {isPersian ? 'مخفی / پیش‌نویس (فقط ادمین)' : 'Hidden / Draft (Admin Only)'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Unfinished Course Toggle */}
+            <TouchableOpacity
+              onPress={() => setIsUnfinished(!isUnfinished)}
+              className={`mb-4 p-3.5 rounded-xl border flex-row items-center gap-3 ${
+                isUnfinished
+                  ? 'bg-amber-950/60 border-amber-500/70'
+                  : 'bg-surface-dark border-surface-border'
+              }`}
+            >
+              <View
+                className={`w-6 h-6 rounded-md items-center justify-center border ${
+                  isUnfinished
+                    ? 'bg-amber-500 border-amber-400'
+                    : 'border-slate-600 bg-surface-card'
+                }`}
+              >
+                {isUnfinished && <Text className="text-black font-extrabold text-xs">✓</Text>}
+              </View>
+              <View className="flex-1">
+                <Text className="text-white font-bold text-xs">
+                  {isPersian
+                    ? 'علامت‌گذاری به عنوان دوره تکمیل‌نشده (عدم صدور تصدیق‌نامه)'
+                    : 'Mark as Unfinished Course (Block Certificate Issuance)'}
+                </Text>
+                <Text className="text-slate-400 text-[11px] mt-0.5">
+                  {isPersian
+                    ? 'دانشجویان می‌توانند درس‌های بارگذاری شده را مطالعه کنند، اما تا زمان تکمیل نهایی، تصدیق‌نامه صادر نمی‌گردد.'
+                    : 'Students can study released lessons, but certificates will NOT be issued until marked complete.'}
+                </Text>
+              </View>
+            </TouchableOpacity>
 
             {/* Title Inputs */}
             <View className="mb-1">
@@ -298,6 +487,18 @@ export default function AdminDashboardScreen() {
                 placeholder="Detailed curriculum overview, prerequisites, target audience, and key concepts covered..."
                 multiline
                 numberOfLines={4}
+              />
+            </View>
+
+            {/* Teacher Short Bio */}
+            <View className="mb-2">
+              <Input
+                label={isPersian ? 'بیوگرافی کوتاه مدرس (نمایش در نیمه دوم باکس کاتالوگ)' : 'Teacher Short Bio (Displayed on the other half of Catalogue Box)'}
+                value={instructorBio}
+                onChangeText={setInstructorBio}
+                placeholder="1-2 sentences about teacher credentials..."
+                multiline
+                numberOfLines={2}
               />
             </View>
 
@@ -439,10 +640,19 @@ export default function AdminDashboardScreen() {
                             <Text className="text-amber-300 text-[10px] font-bold">{item.category}</Text>
                           </View>
                         )}
+                        {item.status === 'published' ? (
+                          <Badge label="PUBLISHED" variant="success" />
+                        ) : (
+                          <Badge label="HIDDEN (DRAFT)" variant="warning" />
+                        )}
+                        {item.isUnfinished ? (
+                          <Badge label="⏳ UNFINISHED (NO CERT)" variant="warning" />
+                        ) : (
+                          <Badge label="🎓 COMPLETE" variant="success" />
+                        )}
                         {item.youtubeVideoId && (
                           <Badge label="📺 YouTube" variant="danger" />
                         )}
-                        <Badge label={item.status.toUpperCase()} variant={item.status === 'published' ? 'success' : 'warning'} />
                       </View>
                     </View>
 
@@ -463,13 +673,68 @@ export default function AdminDashboardScreen() {
                   </View>
                 </View>
 
-                <View className="flex-row justify-between items-center border-t border-surface-border/60 pt-3">
+                {/* Course Action Toolbar */}
+                <View className="border-t border-surface-border/60 pt-3 mt-1 flex-row justify-between items-center flex-wrap gap-2">
                   <Text className="text-xs text-gold-400 font-semibold">
-                    Pass: {item.passPercentage}% • Exam: {item.exam?.questionCount || 10} Qs
+                    Pass: {item.passPercentage || 80}% • Exam: {item.exam?.questionCount || 10} Qs
                   </Text>
-                  <Text className="text-xs text-brand-400 font-bold">
-                    {isPersian ? 'ویرایش محتوا و سوالات →' : 'Edit Lessons & Exam →'}
-                  </Text>
+
+                  <View className="flex-row items-center gap-1.5 flex-wrap">
+                    {/* Hide / Unhide button */}
+                    <TouchableOpacity
+                      onPress={() => item.id && toggleVisibilityMutation.mutate({ id: item.id, currentStatus: item.status || 'published' })}
+                      disabled={toggleVisibilityMutation.isPending}
+                      className={`px-2.5 py-1.5 rounded-lg border flex-row items-center gap-1 ${
+                        item.status === 'published'
+                          ? 'bg-surface-dark border-slate-700'
+                          : 'bg-emerald-950/80 border-emerald-500/60'
+                      }`}
+                    >
+                      <Text className={`text-xs font-bold ${item.status === 'published' ? 'text-slate-300' : 'text-emerald-300'}`}>
+                        {item.status === 'published'
+                          ? (isPersian ? '👁️ مخفی' : '👁️ Hide')
+                          : (isPersian ? '👁️ انتشار' : '👁️ Publish')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Mark Unfinished / Complete */}
+                    <TouchableOpacity
+                      onPress={() => item.id && toggleUnfinishedMutation.mutate({ id: item.id, currentIsUnfinished: !!item.isUnfinished })}
+                      disabled={toggleUnfinishedMutation.isPending}
+                      className={`px-2.5 py-1.5 rounded-lg border flex-row items-center gap-1 ${
+                        item.isUnfinished
+                          ? 'bg-emerald-950/80 border-emerald-500/60'
+                          : 'bg-amber-950/80 border-amber-500/60'
+                      }`}
+                    >
+                      <Text className={`text-xs font-bold ${item.isUnfinished ? 'text-emerald-300' : 'text-amber-300'}`}>
+                        {item.isUnfinished
+                          ? (isPersian ? '✓ تکمیل شد' : '✓ Mark Complete')
+                          : (isPersian ? '⏳ ناتمام' : '⏳ Mark Unfinished')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Edit Lessons & Exam */}
+                    <TouchableOpacity
+                      onPress={() => router.push(`/admin/courses/${item.id}` as any)}
+                      className="px-2.5 py-1.5 rounded-lg bg-brand-900/60 border border-brand-500/40 flex-row items-center gap-1"
+                    >
+                      <Text className="text-xs font-bold text-brand-300">
+                        ✎ {isPersian ? 'ویرایش محتوا و سوالات' : 'Edit Lessons & Exam'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Delete Course */}
+                    <TouchableOpacity
+                      onPress={() => item.id && handleDeleteCourse(item.id, item.title)}
+                      disabled={deleteMutation.isPending}
+                      className="px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-700/60 flex-row items-center gap-1"
+                    >
+                      <Text className="text-xs font-bold text-red-300">
+                        🗑️ {isPersian ? 'حذف' : 'Delete'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </Card>
             ))}

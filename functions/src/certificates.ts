@@ -28,11 +28,11 @@ export interface FieldCoord {
 const DEFAULT_FIELDS: FieldCoord[] = [
   {
     id: 'nameFa',
-    top: 26.8,
-    left: 42.0,
-    width: 25.5,
-    height: 4.0,
-    fontSize: 32,
+    top: 35.6,
+    left: 48.5,
+    width: 21.0,
+    height: 3.8,
+    fontSize: 28,
     fontFamily: 'Vazirmatn, sans-serif',
     fontWeight: '800',
     color: '#0b1a30',
@@ -41,11 +41,11 @@ const DEFAULT_FIELDS: FieldCoord[] = [
   },
   {
     id: 'courseFa',
-    top: 32.5,
-    left: 10.5,
-    width: 58.0,
-    height: 3.8,
-    fontSize: 26,
+    top: 41.8,
+    left: 27.0,
+    width: 40.0,
+    height: 3.6,
+    fontSize: 24,
     fontFamily: 'Vazirmatn, sans-serif',
     fontWeight: '700',
     color: '#0b1a30',
@@ -54,11 +54,11 @@ const DEFAULT_FIELDS: FieldCoord[] = [
   },
   {
     id: 'nameEn',
-    top: 54.8,
-    left: 28.0,
-    width: 50.0,
-    height: 4.0,
-    fontSize: 34,
+    top: 63.6,
+    left: 40.5,
+    width: 35.0,
+    height: 3.8,
+    fontSize: 28,
     fontFamily: "'Playfair Display', serif",
     fontWeight: '700',
     fontStyle: 'italic',
@@ -68,11 +68,11 @@ const DEFAULT_FIELDS: FieldCoord[] = [
   },
   {
     id: 'courseEn',
-    top: 60.8,
-    left: 48.5,
-    width: 41.0,
-    height: 4.0,
-    fontSize: 25,
+    top: 69.0,
+    left: 54.2,
+    width: 23.0,
+    height: 3.6,
+    fontSize: 22,
     fontFamily: "'Inter', sans-serif",
     fontWeight: '700',
     color: '#0b1a30',
@@ -81,10 +81,10 @@ const DEFAULT_FIELDS: FieldCoord[] = [
   },
   {
     id: 'date',
-    top: 81.8,
-    left: 31.0,
-    width: 14.0,
-    height: 3.0,
+    top: 88.8,
+    left: 41.0,
+    width: 12.5,
+    height: 3.2,
     fontSize: 14,
     fontFamily: "'Inter', 'Vazirmatn', sans-serif",
     fontWeight: '700',
@@ -94,10 +94,10 @@ const DEFAULT_FIELDS: FieldCoord[] = [
   },
   {
     id: 'qr',
-    top: 73.1,
-    left: 15.6,
-    width: 7.2,
-    height: 9.7,
+    top: 78.5,
+    left: 30.8,
+    width: 5.3,
+    height: 9.6,
     fontSize: 0,
     fontFamily: 'sans-serif',
     fontWeight: 'normal',
@@ -107,14 +107,14 @@ const DEFAULT_FIELDS: FieldCoord[] = [
   },
   {
     id: 'certificateId',
-    top: 89.2,
-    left: 11.0,
-    width: 16.5,
-    height: 2.5,
-    fontSize: 13,
+    top: 90.2,
+    left: 27.5,
+    width: 12.0,
+    height: 2.4,
+    fontSize: 12,
     fontFamily: 'monospace',
     fontWeight: '700',
-    color: '#475569',
+    color: '#1e293b',
     textAlign: 'center',
     direction: 'ltr',
   },
@@ -384,11 +384,63 @@ export const issueCertificate = onCall({
     throw new HttpsError('permission-denied', 'You do not own this exam attempt.');
   }
 
-  if (!attemptData.passed) {
-    throw new HttpsError('failed-precondition', 'Exam attempt was not passed. Minimum 80% is required for certificate.');
+  // Verify attempt type is final_exam (prevent using module_assessment attempts)
+  if (attemptData.type && attemptData.type !== 'final_exam') {
+    throw new HttpsError('failed-precondition', 'Invalid attempt type. Must be a completed final exam.');
+  }
+
+  // Verify attempt was formally submitted
+  if (!attemptData.submittedAt) {
+    throw new HttpsError('failed-precondition', 'Exam attempt has not been officially submitted.');
   }
 
   const courseId = attemptData.courseId;
+  if (!courseId) {
+    throw new HttpsError('failed-precondition', 'Attempt is missing courseId.');
+  }
+
+  // 1b. Fetch Course early to verify pass percentage and prerequisites
+  const courseDoc = await db.collection('courses').doc(courseId).get();
+  if (!courseDoc.exists) {
+    throw new HttpsError('not-found', 'Course associated with this exam attempt not found.');
+  }
+  const courseData = courseDoc.data()!;
+
+  // 1b-i. Reject if course is unfinished or hidden
+  if (courseData.isUnfinished === true) {
+    throw new HttpsError(
+      'failed-precondition',
+      'This course is currently marked as unfinished by the instructor. Certificates cannot be issued for unfinished courses / این دوره هنوز تکمیل نشده است و گواهینامه برای آن صادر نمی‌شود.'
+    );
+  }
+  if (courseData.status !== 'published') {
+    throw new HttpsError(
+      'failed-precondition',
+      'This course is currently hidden/unpublished. Certificates cannot be issued / این دوره منتشر نشده است.'
+    );
+  }
+
+  const passPercentage = courseData.passPercentage || 80;
+
+  // Verify passing status and score threshold
+  const scorePercent = typeof attemptData.scorePercent === 'number' ? attemptData.scorePercent : null;
+  if (!attemptData.passed || scorePercent === null || scorePercent < passPercentage) {
+    throw new HttpsError('failed-precondition', `Exam attempt was not passed. Minimum ${passPercentage}% is required for certificate.`);
+  }
+
+  // 1c. Verify Course Lesson Prerequisites (all published lessons must be completed)
+  const lessonsSnap = await db.collection('courses').doc(courseId).collection('lessons').where('status', '==', 'published').get();
+  if (!lessonsSnap.empty) {
+    const progressDoc = await db.collection('progress').doc(`${uid}_${courseId}`).get();
+    const progressData = progressDoc.exists ? progressDoc.data() : null;
+    const uncompletedLessons = lessonsSnap.docs.filter((doc) => !progressData?.lessons?.[doc.id]?.completed);
+    if (uncompletedLessons.length > 0) {
+      throw new HttpsError(
+        'failed-precondition',
+        `Cannot issue certificate: ${uncompletedLessons.length} published lessons remain uncompleted in your progress record.`
+      );
+    }
+  }
 
   // 2. Idempotency Check: search for existing non-revoked certificate
   const existingSnap = await db.collection('certificates')
@@ -411,9 +463,7 @@ export const issueCertificate = onCall({
     };
   }
 
-  // 3. Fetch Course Info
-  const courseDoc = await db.collection('courses').doc(courseId).get();
-  const courseData = courseDoc.exists ? courseDoc.data() : null;
+  // 3. Course Titles
   const courseTitleEn = courseData?.title || 'Certified Course';
   const courseTitleFa = courseData?.faTitle || courseData?.title || 'دوره تخصصی';
 
@@ -547,12 +597,20 @@ export const issueCertificate = onCall({
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // 12. Lock Student Name permanently in User Profile
+    // 12. Lock Student Name permanently in User Profile & Mark Progress Certified
     await db.collection('users').doc(uid).set({
       nameEn,
       nameFa,
       nameLocked: true,
       lastCertificateIssuedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    await db.collection('progress').doc(`${uid}_${courseId}`).set({
+      certificateId,
+      certified: true,
+      completed: true,
+      finalExamPassed: true,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
 
     return {

@@ -8,7 +8,7 @@ export interface InputProps extends TextInputProps {
   className?: string;
 }
 
-export const Input = forwardRef<TextInput, InputProps>(({
+export const Input = forwardRef<React.ElementRef<typeof TextInput>, InputProps>(({
   label,
   error,
   className = '',

@@ -26,14 +26,29 @@ export const startFinalExam = onCall(async (request) => {
   const courseData = courseDoc.data()!;
   const examSettings = courseData.exam || { questionCount: 10, timeLimitMin: 30, maxAttempts: 3, cooldownHours: 24 };
 
-  // 2. Check lesson completion prerequisite
-  const lessonsSnap = await db.collection('courses').doc(courseId).collection('lessons').where('status', '==', 'published').get();
-  const progressDoc = await db.collection('progress').doc(`${auth.uid}_${courseId}`).get();
-  const progressData = (progressDoc.exists ? progressDoc.data() : { lessons: {} }) || { lessons: {} };
+  // 2. Admin bypass & lesson completion prerequisite
+  const isAdminUser = Boolean(
+    auth.token?.admin === true ||
+    (auth.token?.email && [
+      'shir@secureai.be',
+      'admin@example.com',
+      'admin@farukh.org',
+      'shirfarukh@gmail.com',
+      'shir@farukh.org',
+      'farukh@farukh.org',
+      'info@farukh.org',
+    ].includes((auth.token.email as string).toLowerCase()))
+  );
 
-  const uncompleted = lessonsSnap.docs.filter(doc => !progressData.lessons?.[doc.id]?.completed);
-  if (uncompleted.length > 0) {
-    throw new HttpsError('failed-precondition', `You must complete all published lessons before taking the final exam. (${uncompleted.length} remaining)`);
+  if (!isAdminUser) {
+    const lessonsSnap = await db.collection('courses').doc(courseId).collection('lessons').where('status', '==', 'published').get();
+    const progressDoc = await db.collection('progress').doc(`${auth.uid}_${courseId}`).get();
+    const progressData = (progressDoc.exists ? progressDoc.data() : { lessons: {} }) || { lessons: {} };
+
+    const uncompleted = lessonsSnap.docs.filter(doc => !progressData.lessons?.[doc.id]?.completed);
+    if (uncompleted.length > 0) {
+      throw new HttpsError('failed-precondition', `You must complete all published lessons before taking the final exam. (${uncompleted.length} remaining)`);
+    }
   }
 
   // 3. Check existing attempts & cooldown
@@ -45,15 +60,15 @@ export const startFinalExam = onCall(async (request) => {
 
   const attempts = attemptsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
   const passedAttempt = attempts.find(a => a.passed === true);
-  if (passedAttempt) {
+  if (!isAdminUser && passedAttempt) {
     throw new HttpsError('already-exists', 'You have already passed the final exam for this course!');
   }
 
-  if (attempts.length >= examSettings.maxAttempts) {
+  if (!isAdminUser && attempts.length >= examSettings.maxAttempts) {
     throw new HttpsError('resource-exhausted', `Maximum exam attempts reached (${examSettings.maxAttempts}). Contact support.`);
   }
 
-  if (attempts.length > 0) {
+  if (!isAdminUser && attempts.length > 0) {
     const lastAttempt = attempts[0];
     if (lastAttempt.submittedAt) {
       const cooldownMs = examSettings.cooldownHours * 60 * 60 * 1000;
@@ -97,6 +112,7 @@ export const startFinalExam = onCall(async (request) => {
   const attemptRef = await db.collection('examAttempts').add({
     uid: auth.uid,
     courseId,
+    type: 'final_exam',
     startedAt: admin.firestore.FieldValue.serverTimestamp(),
     expiresAt,
     questionIds,
@@ -184,6 +200,13 @@ export const submitFinalExam = onCall(async (request) => {
 
   let certificateId: string | null = null;
   if (passed) {
+    // Securely update student progress server-side
+    await db.collection('progress').doc(`${auth.uid}_${attemptData.courseId}`).set({
+      finalExamPassed: true,
+      completed: true,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
     const existingSnap = await db.collection('certificates')
       .where('uid', '==', auth.uid)
       .where('courseId', '==', attemptData.courseId)

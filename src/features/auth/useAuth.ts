@@ -6,7 +6,8 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
-} from '@firebase/auth';
+  User,
+} from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from '@firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { useAuthStore } from './authStore';
@@ -22,20 +23,51 @@ const KNOWN_ADMIN_EMAILS = [
 ];
 
 export function useAuth() {
-  const { user, isAdmin, loading, setUser, setLoading, logout: resetStore } = useAuthStore();
+  const {
+    user,
+    isAdmin,
+    isInstructor,
+    role,
+    instructorMode,
+    loading,
+    setUser,
+    setInstructorMode,
+    setLoading,
+    logout: resetStore,
+  } = useAuthStore();
+
+  const refreshUserClaims = async () => {
+    if (auth.currentUser) {
+      try {
+        const idTokenResult = await auth.currentUser.getIdTokenResult(true);
+        const hasAdminClaim =
+          !!idTokenResult.claims.admin ||
+          (!!auth.currentUser.email && KNOWN_ADMIN_EMAILS.includes(auth.currentUser.email.toLowerCase()));
+        const hasInstructorClaim =
+          !!idTokenResult.claims.instructor ||
+          idTokenResult.claims.role === 'instructor';
+        setUser(auth.currentUser, hasAdminClaim, hasInstructorClaim);
+      } catch (e) {
+        console.warn('Failed to force refresh user claims:', e);
+      }
+    }
+  };
 
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (currentUser) => {
+    const unsubscribe = onIdTokenChanged(auth, async (currentUser: User | null) => {
       if (currentUser) {
         try {
           const idTokenResult = await currentUser.getIdTokenResult(false);
           const hasAdminClaim =
             !!idTokenResult.claims.admin ||
             (!!currentUser.email && KNOWN_ADMIN_EMAILS.includes(currentUser.email.toLowerCase()));
-          setUser(currentUser, hasAdminClaim);
+          const hasInstructorClaim =
+            !hasAdminClaim &&
+            (!!idTokenResult.claims.instructor || idTokenResult.claims.role === 'instructor');
+          setUser(currentUser, hasAdminClaim, hasInstructorClaim);
         } catch {
           const isKnownAdmin = !!currentUser.email && KNOWN_ADMIN_EMAILS.includes(currentUser.email.toLowerCase());
-          setUser(currentUser, isKnownAdmin);
+          setUser(currentUser, isKnownAdmin, false);
         }
       } else {
         resetStore();
@@ -154,6 +186,11 @@ export function useAuth() {
   return {
     user,
     isAdmin,
+    isInstructor,
+    role,
+    instructorMode,
+    setInstructorMode,
+    refreshUserClaims,
     loading,
     login,
     register,

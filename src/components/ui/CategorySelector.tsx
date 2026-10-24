@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '../../features/theme/ThemeContext';
-import { COURSE_CATEGORIES } from '../../types/course';
 
 export interface CategoryMeta {
   id: string;

@@ -10,7 +10,7 @@ import '../src/lib/i18n';
 import '../global.css';
 
 function RootLayoutNav() {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, isInstructor, loading } = useAuth();
   const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
@@ -23,11 +23,16 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const inAdminGroup = segments[0] === 'admin';
+    const inInstructorGroup = segments[0] === 'instructor';
 
-    if (!user && inAdminGroup) {
+    if (!user && (inAdminGroup || inInstructorGroup)) {
       router.replace('/(auth)/login');
+    } else if (user && inAdminGroup && !isAdmin) {
+      router.replace('/(student)');
+    } else if (user && inInstructorGroup && !isInstructor && !isAdmin) {
+      router.replace('/(student)');
     }
-  }, [user, isAdmin, loading, segments, router]);
+  }, [user, isAdmin, isInstructor, loading, segments, router]);
 
   if (loading) {
     return (
@@ -42,6 +47,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(student)" />
       <Stack.Screen name="admin" />
+      <Stack.Screen name="instructor" />
       <Stack.Screen
         name="verify/[certificateId]"
         options={{

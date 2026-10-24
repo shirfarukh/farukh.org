@@ -8,9 +8,11 @@ import {
   ActivityIndicator,
   Linking,
   ScrollView,
+  Image,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import Constants from 'expo-constants';
 import { ScreenWrapper } from '../../../src/components/ui/ScreenWrapper';
@@ -18,6 +20,7 @@ import { Card } from '../../../src/components/ui/Card';
 import { Button } from '../../../src/components/ui/Button';
 import { Badge } from '../../../src/components/ui/Badge';
 import { QuizCard } from '../../../src/components/QuizCard';
+import { CertificateViewer } from '../../../src/components/CertificateViewer';
 import { useTheme } from '../../../src/features/theme/ThemeContext';
 import { useAuth } from '../../../src/features/auth/useAuth';
 import { startFinalExamCallable, submitFinalExamCallable, ExamQuestionClient } from '../../../src/features/exam/examApi';
@@ -25,6 +28,7 @@ import {
   issueCertificateCallable,
   listenToCertificate,
 } from '../../../src/features/certificates/certificatesApi';
+import { getCourseDetail } from '../../../src/features/student/studentApi';
 import {
   validateEnglishName,
   validatePersianName,
@@ -39,6 +43,12 @@ export default function FinalExamScreen() {
   const { user } = useAuth();
   const { i18n } = useTranslation();
   const isPersian = i18n.language?.startsWith('fa');
+
+  const { data: course } = useQuery({
+    queryKey: ['courseDetail', courseId],
+    queryFn: () => getCourseDetail(courseId!),
+    enabled: !!courseId,
+  });
 
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<ExamQuestionClient[]>([]);
@@ -167,6 +177,34 @@ export default function FinalExamScreen() {
             ? 'برای دریافت گواهینامه معتبر رسمی بین‌المللی FARUKH.ORG و AECCI حداقل نمره ۸۰٪ الزامی است.'
             : 'Score 80% or higher to receive your official verifiable course certificate credited by AECCI.'}
         </Text>
+
+        {course?.isUnfinished && (
+          <View
+            style={{
+              backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : '#FEF3C7',
+              borderColor: 'rgba(245, 158, 11, 0.4)',
+              borderWidth: 1,
+              borderRadius: 14,
+              padding: 12,
+              marginBottom: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <Text style={{ fontSize: 24 }}>⏳</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#D97706', fontWeight: 'bold', fontSize: 13 }}>
+                {isPersian ? 'دوره در حال تدوین • گواهینامه غیرفعال' : 'Unfinished Course • Certificate Disabled'}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                {isPersian
+                  ? 'این دوره هنوز توسط استاد تکمیل نگردیده است. شرکت در آزمون جهت سنجش مهارت مجاز است، اما صدور تصدیق‌نامه تا زمان تکمیل کامل دوره امکان‌پذیر نمی‌باشد.'
+                  : 'This course is currently in-progress and marked as unfinished by the instructor. You can take the exam for practice, but certificates will not be issued until the course is completed.'}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {errorMsg ? (
           <Card className="border-red-800 bg-red-950/60 mb-6">
@@ -297,30 +335,10 @@ export default function FinalExamScreen() {
                           <Badge label="✓ READY & VERIFIED" variant="success" />
                         </View>
 
-                        <View className="space-y-2 mb-6 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-                          <Text style={{ color: colors.textSecondary }} className="text-xs">
-                            {isPersian ? 'نام صاحب گواهینامه:' : 'Certificate Recipient:'}
-                          </Text>
-                          <View className="flex-row justify-between items-center">
-                            <Text style={{ color: colors.text }} className="text-base font-bold">
-                              {liveCertificate.nameEn}
-                            </Text>
-                            <Text style={{ color: colors.gold, writingDirection: 'rtl', textAlign: 'right' }} className="text-base font-bold">
-                              {liveCertificate.nameFa}
-                            </Text>
-                          </View>
+                        {/* Official Visual Certificate Image with Overlaid Details & Black QR Code */}
+                        <CertificateViewer certificate={liveCertificate} />
 
-                          <View className="flex-row justify-between pt-2 border-t border-slate-800">
-                            <Text style={{ color: colors.textMuted }} className="text-xs">
-                              ID: {liveCertificate.certificateId || liveCertificate.id}
-                            </Text>
-                            <Text style={{ color: colors.textMuted }} className="text-xs">
-                              {liveCertificate.dateGregorian} / {liveCertificate.dateJalali}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <View className="space-y-3">
+                        <View className="space-y-3 mt-4">
                           {liveCertificate.pdfPath && (
                             <Button
                               title={isPersian ? 'دانلود تصدیق‌نامه چاپی (PDF)' : 'Download Certified PDF Certificate'}
@@ -363,6 +381,31 @@ export default function FinalExamScreen() {
                           {isPersian
                             ? 'سیستم در حال رندر با موتور Chromium و بارگذاری در سرور ابری می‌باشد. لطفاً چند لحظه شکیبا باشید.'
                             : 'Headless Chromium is rendering your certified PDF & JPG with high-resolution vector fonts and QR code.'}
+                        </Text>
+                      </View>
+                    ) : course?.isUnfinished ? (
+                      /* CASE C-0: Unfinished Course - Certificate Disabled */
+                      <View
+                        style={{
+                          backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : '#FEF3C7',
+                          borderColor: 'rgba(245, 158, 11, 0.4)',
+                          borderWidth: 1,
+                          borderRadius: 16,
+                          padding: 18,
+                          alignItems: 'center',
+                          marginVertical: 8,
+                        }}
+                      >
+                        <Text style={{ fontSize: 32, marginBottom: 8 }}>⏳</Text>
+                        <Text style={{ color: '#D97706', fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>
+                          {isPersian
+                            ? 'دوره در حال تدوین است • صدور گواهینامه غیرفعال'
+                            : 'Course Is In Progress • Certificate Issuance Disabled'}
+                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
+                          {isPersian
+                            ? 'تبریک! شما این آزمون را با موفقیت پشت سر گذاشتید و نمره شما در سوابق سیستم ثبت گردید. با توجه به اینکه این دوره در وضعیت «تکمیل‌نشده» قرار دارد، صدور تصدیق‌نامه رسمی پس از تکمیل نهایی دوره توسط استاد فعال خواهد شد.'
+                            : 'Congratulations on passing! Your score has been officially recorded in your student profile. Because this course is currently marked as unfinished by the instructor, certificates will be issued once the course is completed.'}
                         </Text>
                       </View>
                     ) : (

@@ -149,6 +149,7 @@ export const CertificateSchema = z.object({
   status: z.enum(['generating', 'ready', 'failed']).default('generating'),
   pdfPath: z.string().optional(),
   jpgPath: z.string().optional(),
+  qrCodeUrl: z.string().optional(),
   revoked: z.boolean().default(false),
   revokedAt: z.any().optional(),
   revokedReason: z.string().optional(),

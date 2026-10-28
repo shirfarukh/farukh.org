@@ -1,3 +1,58 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* Emil Kowalski Design System Easing Tokens */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Duration Tokens (Sub-300ms Rule) */
+  --duration-press: 140ms;
+  --duration-popover: 180ms;
+  --duration-modal: 240ms;
+}
+
+/* Tactile press feedback for buttons and interactive controls */
+.pressable-feedback {
+  transition: transform var(--duration-press) var(--ease-out), opacity var(--duration-press) ease;
+}
+
+.pressable-feedback:active {
+  transform: scale(0.97);
+}
+
+/* Card tactile feedback */
+.card-pressable {
+  transition: transform var(--duration-press) var(--ease-out), box-shadow var(--duration-press) ease;
+}
+
+.card-pressable:active {
+  transform: scale(0.985);
+}
+
+/* Natural entrance animation (Never animate from scale(0)) */
+@keyframes emil-scale-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-enter {
+  animation: emil-scale-enter var(--duration-modal) var(--ease-out) forwards;
+}
+
+/* Semi-transparent layered shadows over harsh solid borders */
+.shadow-layered {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-layered-dark {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.25);
+}

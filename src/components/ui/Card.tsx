@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
+import { View, Pressable, StyleProp, ViewStyle, Platform } from 'react-native';
 import { useTheme } from '../../features/theme/ThemeContext';
+import { scalePresets } from '../../theme/motion';
 
 interface CardProps {
   children: React.ReactNode;
@@ -15,27 +16,45 @@ export const Card: React.FC<CardProps> = ({
   className = '',
   style,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const baseStyle: ViewStyle = {
     backgroundColor: colors.card,
-    borderColor: colors.cardBorder,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
     borderWidth: 1,
     padding: 16,
     borderRadius: 16,
     marginBottom: 16,
+    // Layered subtle elevation
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.25 : 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   };
 
   if (onPress) {
     return (
-      <TouchableOpacity
+      <Pressable
         onPress={onPress}
-        activeOpacity={0.8}
-        style={[baseStyle, style]}
+        style={({ pressed }) => [
+          baseStyle,
+          {
+            transform: [{ scale: pressed ? scalePresets.pressScaleCard : 1 }],
+            opacity: pressed ? 0.94 : 1,
+            ...(Platform.OS === 'web'
+              ? ({
+                  transition: 'transform 140ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 140ms ease',
+                  cursor: 'pointer',
+                } as any)
+              : {}),
+          },
+          style,
+        ]}
         className={className}
       >
         {children}
-      </TouchableOpacity>
+      </Pressable>
     );
   }
 

@@ -70,6 +70,10 @@ export default function InstructorCourseEditScreen() {
   const [lessonDuration, setLessonDuration] = useState('10:00');
   const [lessonYoutubeUrl, setLessonYoutubeUrl] = useState('');
   const [lessonContent, setLessonContent] = useState('');
+  const [scheduleCalendarLesson, setScheduleCalendarLesson] = useState(false);
+  const [calendarMeetUrl, setCalendarMeetUrl] = useState('');
+  const [calendarDateStr, setCalendarDateStr] = useState('');
+  const [calendarTimeStr, setCalendarTimeStr] = useState('18:00');
 
   // Lesson Quiz inside Lesson Form
   const [quizQuestionText, setQuizQuestionText] = useState('');
@@ -286,12 +290,40 @@ export default function InstructorCourseEditScreen() {
         const keyRef = doc(db, effectiveCol, courseId, 'lessons', lessonDoc.id, 'answerKeys', qRef.id);
         await setDoc(keyRef, { correctOptionId: quizCorrect });
       }
+
+      // If Calendar live session option was selected, schedule to liveSessions collection
+      if (scheduleCalendarLesson && calendarMeetUrl.trim()) {
+        const startDateTime = new Date(`${calendarDateStr || new Date().toISOString().split('T')[0]}T${calendarTimeStr || '18:00'}:00`);
+        const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+        await addDoc(collection(db, 'liveSessions'), {
+          title: lessonTitle.trim(),
+          description: lessonContent.trim() || `Live lesson for course: ${title}`,
+          courseId,
+          courseTitle: title,
+          category: category || 'General',
+          targetType: 'course',
+          hasCalendarEvent: true,
+          instructorId: user?.uid || '',
+          instructorName: user?.displayName || user?.email?.split('@')[0] || 'Instructor',
+          meetUrl: calendarMeetUrl.trim(),
+          scheduledStartTime: startDateTime.toISOString(),
+          scheduledEndTime: endDateTime.toISOString(),
+          durationMin: 60,
+          status: 'scheduled',
+          attendeeUids: [],
+          attendeeCount: 0,
+          createdAt: serverTimestamp(),
+        });
+      }
     },
     onSuccess: () => {
       setShowLessonModal(false);
       setLessonTitle('');
       setLessonYoutubeUrl('');
       setLessonContent('');
+      setScheduleCalendarLesson(false);
+      setCalendarMeetUrl('');
+      setCalendarDateStr('');
       setQuizQuestionText('');
       setQuizOpt1('');
       setQuizOpt2('');
@@ -887,6 +919,81 @@ export default function InstructorCourseEditScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                </View>
+
+                {/* Optional Academic Calendar Integration */}
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.cardBorder, paddingTop: 14, marginTop: 14 }}>
+                  <TouchableOpacity
+                    onPress={() => setScheduleCalendarLesson(!scheduleCalendarLesson)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: scheduleCalendarLesson ? 'rgba(74, 222, 128, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                      padding: 12,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: scheduleCalendarLesson ? colors.success : colors.cardBorder,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <Text style={{ fontSize: 20 }}>📅</Text>
+                      <View>
+                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>
+                          {isPersian ? 'افزودن رویداد تقویم آموزشی (اختیاری)' : 'Add to Academic Calendar (Optional)'}
+                        </Text>
+                        <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+                          {isPersian
+                            ? 'هماهنگی جلسه زنده در تقویم آموزشی دوره‌ها و صنوف'
+                            : 'Sync with live session or meeting on student calendars'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 6,
+                        borderWidth: 2,
+                        borderColor: scheduleCalendarLesson ? colors.success : colors.textMuted,
+                        backgroundColor: scheduleCalendarLesson ? colors.success : 'transparent',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {scheduleCalendarLesson && <Text style={{ color: '#000', fontSize: 12, fontWeight: '900' }}>✓</Text>}
+                    </View>
+                  </TouchableOpacity>
+
+                  {scheduleCalendarLesson && (
+                    <View style={{ marginTop: 12, gap: 10 }}>
+                      <Input
+                        label={isPersian ? 'لینک گوگل میت یا جلسه آنلاین (اختیاری)' : 'Google Meet URL (Optional)'}
+                        placeholder="https://meet.google.com/xyz-abcd-efg"
+                        value={calendarMeetUrl}
+                        onChangeText={setCalendarMeetUrl}
+                        autoCapitalize="none"
+                      />
+                      <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <View style={{ flex: 1 }}>
+                          <Input
+                            label={isPersian ? 'تاریخ (YYYY-MM-DD)' : 'Date (YYYY-MM-DD)'}
+                            placeholder="2026-11-01"
+                            value={calendarDateStr}
+                            onChangeText={setCalendarDateStr}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Input
+                            label={isPersian ? 'ساعت (HH:MM)' : 'Time (HH:MM)'}
+                            placeholder="18:00"
+                            value={calendarTimeStr}
+                            onChangeText={setCalendarTimeStr}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 <View className="flex-row justify-end gap-3 mt-4">

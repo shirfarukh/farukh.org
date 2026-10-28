@@ -654,138 +654,48 @@ const DEFAULT_LANGUAGE_COURSE: any = {
   ],
 };
 
-const SCHOOL_GRADES_TRACKS: any[] = [
+const SCHOOL_CLASSES_TRACKS = [
   {
     grade: 7,
-    id: 'school-grade-7',
-    title: 'Grade 7: Secondary Core Track',
-    faTitle: 'صنف هفتم (دوره متوسطه اول)',
-    slug: 'school-grade-7',
-    category: 'School Grades',
-    description: 'Comprehensive curriculum covering algebra basics, introductory biology, history, geography, Dari, and English.',
-    faDescription: 'برنامه درسی جامع شامل الجبر پایه، بیولوژی عمومی، تاریخ، جغرافیا، ادبیات دری و انگلیسی.',
-    coverUrl: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop',
-    passPercentage: 75,
-    exam: { questionCount: 10, timeLimitMin: 30, maxAttempts: 3, cooldownHours: 24 },
-    lessonCount: 28,
-    subjects: ['Algebra', 'General Science', 'History & Geo', 'Dari', 'Pashto', 'English'],
-    status: 'published',
-    ownerName: 'Afghan Teachers Initiative',
-    instructorBio: 'Dedicated Afghan female educators delivering national school curriculum.',
-    sampleLessons: [
-      { title: '1. Linear Equations & Variables', duration: '35m', description: 'Core algebraic concepts and equation solving.' },
-      { title: '2. Cell Structure & Microorganisms', duration: '40m', description: 'Basic biology principles and cell functions.' },
-    ],
+    en: 'Grade 7: Secondary Core',
+    fa: 'صنف هفتم (دوره متوسطه اول)',
+    subjectsEn: 'Algebra, Biology, World Geography, History, Dari, Pashto, English',
+    subjectsFa: 'الجبر، بیولوژی، جغرافیای جهان، تاریخ، ادبیات، پشتو، انگلیسی',
   },
   {
     grade: 8,
-    id: 'school-grade-8',
-    title: 'Grade 8: Sciences & Mathematics',
-    faTitle: 'صنف هشتم (علوم پایه و ریاضیات)',
-    slug: 'school-grade-8',
-    category: 'School Grades',
-    description: 'In-depth geometry, fundamentals of physics and chemistry, plant biology, literature, and intermediate English.',
-    faDescription: 'هندسه تحلیلی، مقدمات فیزیک و کیمیا، زیست‌شناسی گیاهی، ادبیات و گرامر انگلیسی.',
-    coverUrl: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&auto=format&fit=crop',
-    passPercentage: 75,
-    exam: { questionCount: 10, timeLimitMin: 30, maxAttempts: 3, cooldownHours: 24 },
-    lessonCount: 30,
-    subjects: ['Geometry', 'Physics & Chemistry', 'Biology', 'Dari', 'Pashto', 'English'],
-    status: 'published',
-    ownerName: 'Afghan Teachers Initiative',
-    instructorBio: 'Dedicated Afghan female educators delivering national school curriculum.',
-    sampleLessons: [
-      { title: '1. Geometric Theorems and Angles', duration: '40m', description: 'Angles, triangles, and polygon geometric proofs.' },
-      { title: '2. Matter & Chemical Reactions', duration: '45m', description: 'Fundamental chemistry states and molecular changes.' },
-    ],
+    en: 'Grade 8: Sciences & Math',
+    fa: 'صنف هشتم (علوم پایه و ریاضیات)',
+    subjectsEn: 'Geometry, Physics Basics, Chemistry, Biology, Dari, English',
+    subjectsFa: 'هندسه، فیزیک مقدماتی، کیمیا، بیولوژی گیاهی، ادبیات، انگلیسی',
   },
   {
     grade: 9,
-    id: 'school-grade-9',
-    title: 'Grade 9: Intermediate Graduation',
-    faTitle: 'صنف نهم (فارغ‌التحصیلی مقطع متوسطه)',
-    slug: 'school-grade-9',
-    category: 'School Grades',
-    description: 'Advanced algebra, Newtonian mechanics, chemical bonding, human anatomy, Dari literature, and English composition.',
-    faDescription: 'الجبر پیشرفته، مکانیک نیوتنی، پیوندهای کیمیاوی، آناتومی بدن انسان و ادبیات.',
-    coverUrl: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=800&auto=format&fit=crop',
-    passPercentage: 75,
-    exam: { questionCount: 10, timeLimitMin: 30, maxAttempts: 3, cooldownHours: 24 },
-    lessonCount: 32,
-    subjects: ['Advanced Algebra', 'Physics', 'Chemistry', 'Human Anatomy', 'Literature', 'English'],
-    status: 'published',
-    ownerName: 'Afghan Teachers Initiative',
-    instructorBio: 'Dedicated Afghan female educators delivering national school curriculum.',
-    sampleLessons: [
-      { title: '1. Quadratic Equations & Delta Formula', duration: '45m', description: 'Solving quadratic formulas and real-world parabola problems.' },
-      { title: '2. Periodic Table & Chemical Bonds', duration: '40m', description: 'Atomic numbers, valence electrons, and bonding.' },
-    ],
+    en: 'Grade 9: Middle School Graduation',
+    fa: 'صنف نهم (فراغت مقطع متوسطه)',
+    subjectsEn: 'Advanced Algebra, Newtonian Mechanics, Chemical Bonds, Anatomy, Literature',
+    subjectsFa: 'الجبر پیشرفته، مکانیک نیوتنی، پیوندهای کیمیاوی، آناتومی انسان، ادبیات',
   },
   {
     grade: 10,
-    id: 'school-grade-10',
-    title: 'Grade 10: High School Advanced Sciences',
-    faTitle: 'صنف دهم (دوره عالی و تخصصی)',
-    slug: 'school-grade-10',
-    category: 'School Grades',
-    description: 'Trigonometry, vectors, inorganic chemistry, cellular biology, Afghan history, and introductory computer science.',
-    faDescription: 'مثلثات و بردارها، کیمیای غیرعضوی، بیولوژی سلولی، تاریخ معاصر و مبانی کامپیوتر.',
-    coverUrl: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop',
-    passPercentage: 80,
-    exam: { questionCount: 10, timeLimitMin: 30, maxAttempts: 3, cooldownHours: 24 },
-    lessonCount: 36,
-    subjects: ['Trigonometry', 'Vector Physics', 'Inorganic Chem', 'Cell Biology', 'CS Basics', 'English'],
-    status: 'published',
-    ownerName: 'Afghan Teachers Initiative',
-    instructorBio: 'Dedicated Afghan female educators delivering national school curriculum.',
-    sampleLessons: [
-      { title: '1. Trigonometric Functions in the Unit Circle', duration: '45m', description: 'Sin, cos, tan functions and identities.' },
-      { title: '2. 1D Kinematics and Acceleration', duration: '50m', description: 'Velocity vectors, time graphs, and acceleration formulas.' },
-    ],
+    en: 'Grade 10: Senior High School (Lycee)',
+    fa: 'صنف دهم (دوره عالی و لیسه)',
+    subjectsEn: 'Trigonometry, Vector Physics, Inorganic Chemistry, Cell Biology, CS Basics',
+    subjectsFa: 'مثلثات، فیزیک برداری، کیمیای غیرعضوی، بیولوژی سلولی، مبانی کامپیوتر',
   },
   {
     grade: 11,
-    id: 'school-grade-11',
-    title: 'Grade 11: Pre-Diploma Track',
-    faTitle: 'صنف یازدهم (پیش‌دانشگاهی و علوم پایه)',
-    slug: 'school-grade-11',
-    category: 'School Grades',
-    description: 'Pre-calculus limits, electromagnetism, wave optics, organic carbon chemistry, genetics, and formal essay writing.',
-    faDescription: 'حد و پیوستگی، الکترومقناطیس، نور و امواج، کیمیای کاربن (عضوی)، ژنتیک و مقاله‌نویسی.',
-    coverUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&auto=format&fit=crop',
-    passPercentage: 80,
-    exam: { questionCount: 10, timeLimitMin: 30, maxAttempts: 3, cooldownHours: 24 },
-    lessonCount: 38,
-    subjects: ['Pre-Calculus', 'Electromagnetism', 'Organic Chem', 'Genetics', 'Dari', 'English'],
-    status: 'published',
-    ownerName: 'Afghan Teachers Initiative',
-    instructorBio: 'Dedicated Afghan female educators delivering national school curriculum.',
-    sampleLessons: [
-      { title: '1. Limits & Continuity Theorems', duration: '50m', description: 'Approaching infinity, indeterminate forms, and continuity.' },
-      { title: '2. Hydrocarbons & Functional Groups', duration: '45m', description: 'Organic carbon nomenclature, structural formulas, and isomerism.' },
-    ],
+    en: 'Grade 11: Pre-Diploma Track',
+    fa: 'صنف یازدهم (پیش‌دانشگاهی و علوم تخصصی)',
+    subjectsEn: 'Pre-Calculus, Electromagnetism, Organic Chemistry, Genetics, Dari, English',
+    subjectsFa: 'حسابان و حد، الکترومقناطیس، کیمیای عضوی (کاربن)، ژنتیک، ادبیات',
   },
   {
     grade: 12,
-    id: 'school-grade-12',
-    title: 'Grade 12: High School Diploma & Kankor Prep',
-    faTitle: 'صنف دوازدهم (دیپلوم مکتب و آمادگی کانکور)',
-    slug: 'school-grade-12',
-    category: 'School Grades',
-    description: 'Differential & integral calculus, modern atomic physics, comprehensive chemistry review, biology, and Kankor test mastery.',
-    faDescription: 'مشتق و انتگرال، فیزیک اتومی و نسبیت، کیمیای جامع، بیولوژی و فنون تست‌زنی کانکور.',
-    coverUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop',
-    passPercentage: 80,
-    exam: { questionCount: 10, timeLimitMin: 35, maxAttempts: 3, cooldownHours: 24 },
-    lessonCount: 44,
-    subjects: ['Calculus & Integrals', 'Modern Physics', 'Chemistry Review', 'Advanced Biology', 'Kankor Prep', 'English'],
-    status: 'published',
-    ownerName: 'Afghan Teachers Initiative',
-    instructorBio: 'Dedicated Afghan female educators delivering national school curriculum.',
-    sampleLessons: [
-      { title: '1. Advanced Derivatives & Optimization', duration: '55m', description: 'Chain rule, maxima/minima, and curve sketching.' },
-      { title: '2. Kankor Test Strategies: Physics & Chemistry', duration: '60m', description: 'Rapid problem solving and high-yield examination tips.' },
-    ],
+    en: 'Grade 12: High School Diploma & Kankor',
+    fa: 'صنف دوازدهم (دیپلوم بکلوریا و آمادگی کانکور)',
+    subjectsEn: 'Calculus, Nuclear & Atomic Physics, Chemistry Review, Biology, Kankor Prep',
+    subjectsFa: 'دیفرانسیل و انتگرال، فیزیک اتومی و هسته‌ای، کیمیای جامع، آمادگی کانکور',
   },
 ];
 
@@ -802,8 +712,7 @@ export default function StudentCatalogScreen() {
 
   const [selectedCourseForPreview, setSelectedCourseForPreview] = useState<any | null>(null);
   const [feedbackBanner, setFeedbackBanner] = useState<string | null>(null);
-  const [activeCatalogSection, setActiveCatalogSection] = useState<'all' | 'professional' | 'languages'>('all');
-  const [selectedSchoolGrade, setSelectedSchoolGrade] = useState<number | 'all'>('all');
+  const [activeCatalogSection, setActiveCatalogSection] = useState<'all' | 'professional' | 'languages' | 'school_classes'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const { setScrollY } = useScrollHeader();
 
@@ -891,29 +800,9 @@ export default function StudentCatalogScreen() {
     enabled: !!user?.uid && enrolledCourseIds.length > 0,
   });
 
-  // Merge Firestore courses with built-in Language and School Grade tracks
-  const allAvailableCourses = React.useMemo(() => {
-    const list = [...courses];
-    for (const b of BUILTIN_COURSES) {
-      if (!list.some((c) => c.id === b.id || (c as any).slug === b.slug)) {
-        list.push(b as any);
-      }
-    }
-    return list;
-  }, [courses]);
-
-  // Registered courses for this logged-in user with real module progress
-  const enrolledCourses = allAvailableCourses
-    .filter((c) => c.id && enrolledCourseIds.includes(c.id))
-    .map((c) => ({
-      ...c,
-      _progress: certificates.some((crt) => crt.courseId === c.id)
-        ? 100
-        : coursesProgressMap[c.id!] ?? 0,
-    }));
-
   // Language Course detector
   const isLanguageCourse = (c: any) => {
+    if (!c) return false;
     const cat = (c.category || '').toLowerCase();
     const title = (c.title || '').toLowerCase();
     const faTitle = (c.faTitle || '').toLowerCase();
@@ -927,8 +816,9 @@ export default function StudentCatalogScreen() {
     );
   };
 
-  // School Grade Course detector (Afghanistan School Grades for Girls: Grades 6 to 12)
+  // School Grade Course detector
   const isSchoolGradeCourse = (c: any) => {
+    if (!c) return false;
     const cat = (c.category || '').toLowerCase();
     const title = (c.title || '').toLowerCase();
     const faTitle = (c.faTitle || '').toLowerCase();
@@ -948,24 +838,34 @@ export default function StudentCatalogScreen() {
     return !isLanguageCourse(c) && !isSchoolGradeCourse(c);
   };
 
+  // Merge Firestore courses with built-in Language courses (excluding any school grade tracks)
+  const allAvailableCourses = React.useMemo(() => {
+    const list = [...courses];
+    for (const b of BUILTIN_COURSES) {
+      if (!list.some((c) => c.id === b.id || (c as any).slug === b.slug)) {
+        list.push(b as any);
+      }
+    }
+    return list.filter((c) => !isSchoolGradeCourse(c));
+  }, [courses]);
+
+  // Registered courses for this logged-in user with real module progress
+  const enrolledCourses = allAvailableCourses
+    .filter((c) => c.id && enrolledCourseIds.includes(c.id))
+    .map((c) => ({
+      ...c,
+      _progress: certificates.some((crt) => crt.courseId === c.id)
+        ? 100
+        : coursesProgressMap[c.id!] ?? 0,
+    }));
+
   const professionalCourses = allAvailableCourses.filter(isProfessionalCourse);
   const languageCourses = allAvailableCourses.filter(isLanguageCourse);
-  const schoolCourses = allAvailableCourses.filter(isSchoolGradeCourse);
 
   // Sub-filtering for Professional Training
   const filteredProfessionalCourses = selectedCategory === 'All'
     ? professionalCourses
     : professionalCourses.filter((c) => (c as any).category === selectedCategory);
-
-  // Sub-filtering for Afghanistan School Grades for Girls
-  const filteredSchoolCourses = selectedSchoolGrade === 'all'
-    ? schoolCourses
-    : schoolCourses.filter((c) => {
-        const gradeNum = (c as any).grade;
-        if (gradeNum) return gradeNum === selectedSchoolGrade;
-        const titleStr = `${c.title || ''} ${(c as any).faTitle || ''}`;
-        return titleStr.includes(`${selectedSchoolGrade}`);
-      });
 
   // Category counts for Professional subcategory bar
   const professionalCategoryCounts = React.useMemo(() => {
@@ -1118,89 +1018,7 @@ export default function StudentCatalogScreen() {
           return null;
         })()}
 
-        {/* ── SEPARATE OFFICIAL ACADEMIC SCHOOL SHOWCASE BANNER ── */}
-        <View
-          style={{
-            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.65)' : 'rgba(255, 255, 255, 0.9)',
-            borderRadius: 24,
-            borderWidth: 1.5,
-            borderColor: colors.goldBorder,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: colors.gold,
-            shadowOpacity: isDark ? 0.25 : 0.08,
-            shadowOffset: { width: 0, height: 4 },
-            shadowRadius: 16,
-            elevation: 4,
-            ...(Platform.OS === 'web'
-              ? { backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }
-              : {}) as any,
-          }}
-        >
-          <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <View style={{ backgroundColor: isDark ? 'rgba(250, 204, 21, 0.15)' : 'rgba(250, 204, 21, 0.22)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 4.5, borderWidth: 1, borderColor: colors.goldBorder }}>
-              <Text style={{ color: colors.gold, fontSize: 10.5, fontWeight: '800' }}>
-                {isPersian ? '🏛️ مکتب رسمی تحصیلی • جدا از دوره‌های مهارتی' : '🏛️ OFFICIAL ACADEMIC SCHOOL • SEPARATE FROM COURSES'}
-              </Text>
-            </View>
-            <View style={{ backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: isDark ? 'rgba(96, 165, 250, 0.3)' : 'rgba(59, 130, 246, 0.25)' }}>
-              <Text style={{ color: isDark ? '#93C5FD' : '#1D4ED8', fontSize: 11, fontWeight: '800' }}>
-                {isPersian ? 'صنوف ۷ الی ۱۲' : 'Grades 7–12'}
-              </Text>
-            </View>
-          </View>
 
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 6, textAlign: isPersian ? 'right' : 'left' }}>
-            {isPersian ? 'مکتب آنلاین دختران افغانستان (نصاب رسمی معارف - شروع از صنف ۷)' : 'Afghanistan Online Academic School for Girls (Starting from Grade 7)'}
-          </Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 12.5, lineHeight: 20, marginBottom: 14, textAlign: isPersian ? 'right' : 'left' }}>
-            {isPersian
-              ? 'در پاسخ به ممنوعیت آموزش رسمی دختران از صنف هفتم به بعد، این سامانه به عنوان یک «مکتب رسمی تحصیلی» (جدا از دوره‌های آزاد و مهارتی) تمام سرفصل‌های رسمی وزارت معارف افغانستان از صنف ۷ تا ۱۲ را به صورت محرمانه و امن ارائه می‌نماید.'
-              : 'In response to bans on female secondary education starting from Grade 7, this official academic school provides the complete national curriculum from Grade 7 to Grade 12 in a secure, confidential environment, kept separate from vocational courses.'}
-          </Text>
-
-          {/* Quick Grade Links (Grades 7 to 12) */}
-          <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-            {[7, 8, 9, 10, 11, 12].map((g) => (
-              <TouchableOpacity
-                key={g}
-                onPress={() => router.push({ pathname: '/(student)/school', params: { grade: `${g}` } } as any)}
-                activeOpacity={0.8}
-                style={{
-                  paddingHorizontal: 11,
-                  paddingVertical: 5,
-                  borderRadius: 99,
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(202, 138, 4, 0.25)',
-                }}
-              >
-                <Text style={{ color: colors.gold, fontWeight: '700', fontSize: 11 }}>
-                  {isPersian ? `صنف ${g}` : `Grade ${g}`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(student)/school' as any)}
-            activeOpacity={0.85}
-            style={{
-              backgroundColor: colors.primary,
-              borderRadius: 14,
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              flexDirection: isPersian ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
-              {isPersian ? 'ورود به پورتال مکتب رسمی دختران (صنوف ۷ تا ۱۲) ←' : 'Enter Official Academic School Portal (Grades 7–12) →'}
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         {/* ── Catalog Master Section ── */}
         <View style={{ marginBottom: 16 }}>
@@ -1273,6 +1091,7 @@ export default function StudentCatalogScreen() {
               { id: 'all', en: 'All Courses', fa: 'همه دوره‌ها' },
               { id: 'professional', en: 'Professional Training', fa: 'آموزش‌های تخصصی' },
               { id: 'languages', en: 'Languages', fa: 'آموزش زبان‌ها' },
+              { id: 'school_classes', en: 'School Classes (7-12)', fa: 'صنوف مکتب (۷-۱۲)' },
             ].map((tab) => {
               const isActive = activeCatalogSection === tab.id;
               return (
@@ -1798,130 +1617,148 @@ export default function StudentCatalogScreen() {
           </View>
         )}
 
-        {/* ── DEDICATED OFFICIAL ACADEMIC SCHOOL SECTION ── */}
-        <View
-          style={{
-            marginBottom: 32,
-            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.55)' : 'rgba(255, 255, 255, 0.88)',
-            borderRadius: 26,
-            borderWidth: 1.5,
-            borderColor: colors.goldBorder,
-            padding: 22,
-            shadowColor: '#000',
-            shadowOpacity: isDark ? 0.3 : 0.08,
-            shadowOffset: { width: 0, height: 6 },
-            shadowRadius: 18,
-            elevation: 5,
-            ...(Platform.OS === 'web'
-              ? { backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }
-              : {}) as any,
-          }}
-        >
+        {/* ── SECTION 3: ACADEMIC SCHOOL CLASSES (GRADES 7–12) ── */}
+        {(activeCatalogSection === 'all' || activeCatalogSection === 'school_classes') && (
           <View
             style={{
-              flexDirection: isPersian ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 12,
-              paddingBottom: 10,
-              borderBottomWidth: 1,
-              borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.cardBorder,
+              marginBottom: 32,
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.55)' : 'rgba(255, 255, 255, 0.88)',
+              borderRadius: 26,
+              borderWidth: 1.5,
+              borderColor: colors.goldBorder,
+              padding: 22,
+              shadowColor: '#000',
+              shadowOpacity: isDark ? 0.3 : 0.08,
+              shadowOffset: { width: 0, height: 6 },
+              shadowRadius: 18,
+              elevation: 5,
+              ...(Platform.OS === 'web'
+                ? { backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }
+                : {}) as any,
             }}
           >
-            <View>
-              <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Text style={{ fontSize: 18 }}>🎓</Text>
-                <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' }}>
-                  {isPersian ? 'مکتب رسمی تحصیلی • جدا از دوره‌های مهارتی' : 'OFFICIAL ACADEMIC SCHOOL • SEPARATE FROM COURSES'}
-                </Text>
-              </View>
-              <Text style={{ color: colors.text, fontWeight: '900', fontSize: 19, textAlign: isPersian ? 'right' : 'left' }}>
-                {isPersian ? 'مکتب آنلاین دختران افغانستان' : 'Afghanistan Girls Academic School'}
-              </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12.5, marginTop: 3, textAlign: isPersian ? 'right' : 'left' }}>
-                {isPersian
-                  ? 'برنامه درسی رسمی وزارت معارف افغانستان (شروع از صنف هفتم الی صنف دوازدهم)'
-                  : 'Official Ministry of Education curriculum starting from Grade 7 to Grade 12'}
-              </Text>
-            </View>
-            <View style={{ backgroundColor: isDark ? 'rgba(250, 204, 21, 0.15)' : 'rgba(250, 204, 21, 0.22)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: colors.goldBorder }}>
-              <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 11.5 }}>
-                {isPersian ? 'صنوف ۷ تا ۱۲' : 'Grades 7 – 12'}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 21, marginBottom: 16, textAlign: isPersian ? 'right' : 'left' }}>
-            {isPersian
-              ? 'این بخش مکتب رسمی تحصیلی دختران است و با دوره‌های آزاد یا مهارت‌آموزی تفاوت دارد. با توجه به ممنوعیت آموزش رسمی دختران از صنف هفتم به بعد، دانش‌آموزان محترم می‌توانند کتب و مضامین درسی رسمی دوره‌های متوسطه و لیسه (صنف ۷ تا ۱۲) را در پورتال اختصاصی مکتب فرا بگیرند.'
-              : 'This is FARUKH.ORG\'s official academic school, maintained completely separate from our training courses. Following the ban on female education from Grade 7 onwards, this official academic curriculum covers all secondary and high school grades (7 to 12) matched to the Afghan national syllabus.'}
-          </Text>
-
-          {/* Grid of the 6 Academic Grades (7 to 12) */}
-          <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
-            {[
-              { grade: 7, en: 'Grade 7: Secondary Core', fa: 'صنف هفتم (متوسطه)', subjectsEn: 'Algebra, Science, Dari, Pashto, English', subjectsFa: 'الجبر، علوم طبیعی، دری، پشتو، انگلیسی' },
-              { grade: 8, en: 'Grade 8: Sciences & Math', fa: 'صنف هشتم (علوم پایه)', subjectsEn: 'Geometry, Physics, Chemistry, Biology', subjectsFa: 'هندسه، فیزیک، کیمیا، بیولوژی' },
-              { grade: 9, en: 'Grade 9: Middle Graduation', fa: 'صنف نهم (فراغت متوسطه)', subjectsEn: 'Advanced Algebra, Physics, Chemistry, Anatomy', subjectsFa: 'الجبر پیشرفته، کیمیا، فیزیک، آناتومی' },
-              { grade: 10, en: 'Grade 10: Senior Lycee', fa: 'صنف دهم (دوره لیسه)', subjectsEn: 'Trigonometry, Mechanics, Inorganic Chem', subjectsFa: 'مثلثات، فیزیک میخانیک، کیمیای غیرعضوی' },
-              { grade: 11, en: 'Grade 11: Pre-Diploma', fa: 'صنف یازدهم (پیش‌دانشگاهی)', subjectsEn: 'Pre-Calculus, Optics, Organic Chemistry', subjectsFa: 'حسابان و حد، نور و امواج، کیمیای عضوی' },
-              { grade: 12, en: 'Grade 12: High School Diploma', fa: 'صنف دوازدهم (بکلوریا و کانکور)', subjectsEn: 'Calculus, Nuclear Physics, Kankor Prep', subjectsFa: 'انتگرال، فیزیک اتومی، آمادگی کانکور' },
-            ].map((gItem) => (
-              <TouchableOpacity
-                key={gItem.grade}
-                onPress={() => router.push({ pathname: '/(student)/school', params: { grade: `${gItem.grade}` } } as any)}
-                activeOpacity={0.8}
-                style={{
-                  flexBasis: Platform.OS === 'web' ? '31%' : '47%',
-                  flexGrow: 1,
-                  backgroundColor: isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(248, 250, 252, 0.85)',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(250, 204, 21, 0.2)' : 'rgba(226, 232, 240, 0.9)',
-                  borderRadius: 16,
-                  padding: 12,
-                }}
-              >
-                <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: isDark ? 'rgba(250, 204, 21, 0.15)' : 'rgba(250, 204, 21, 0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.goldBorder }}>
-                    <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '800' }}>{gItem.grade}</Text>
-                  </View>
-                  <Text style={{ color: colors.gold, fontSize: 10, fontWeight: '700' }}>
-                    {isPersian ? 'نصاب رسمی' : 'Official'}
+            <View
+              style={{
+                flexDirection: isPersian ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+                paddingBottom: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.cardBorder,
+              }}
+            >
+              <View>
+                <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Text style={{ fontSize: 18 }}>🎓</Text>
+                  <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                    {isPersian ? 'نصاب رسمی مضامین مکتب • صنوف ۷ الی ۱۲' : 'ACADEMIC SCHOOL CURRICULUM • GRADES 7 TO 12'}
                   </Text>
                 </View>
-                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13, marginBottom: 4, textAlign: isPersian ? 'right' : 'left' }}>
-                  {isPersian ? gItem.fa : gItem.en}
+                <Text style={{ color: colors.text, fontWeight: '900', fontSize: 19, textAlign: isPersian ? 'right' : 'left' }}>
+                  {isPersian ? 'صنوف درسی مکتب (صنف هفتم الی دوازدهم)' : 'Academic School Classes (Grades 7–12)'}
                 </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 10.5, lineHeight: 15, textAlign: isPersian ? 'right' : 'left' }} numberOfLines={2}>
-                  {isPersian ? gItem.subjectsFa : gItem.subjectsEn}
+                <Text style={{ color: colors.textSecondary, fontSize: 12.5, marginTop: 3, textAlign: isPersian ? 'right' : 'left' }}>
+                  {isPersian
+                    ? 'برنامه درسی و کتب آموزشی رسمی دوره متوسطه، لیسه و آمادگی کانکور'
+                    : 'Official secondary and high school curriculum matched to national academic textbooks'}
+                </Text>
+              </View>
+              <View style={{ backgroundColor: isDark ? 'rgba(250, 204, 21, 0.15)' : 'rgba(250, 204, 21, 0.22)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: colors.goldBorder }}>
+                <Text style={{ color: colors.gold, fontWeight: '800', fontSize: 11.5 }}>
+                  {isPersian ? 'صنوف ۷ تا ۱۲' : 'Grades 7 – 12'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 21, marginBottom: 16, textAlign: isPersian ? 'right' : 'left' }}>
+              {isPersian
+                ? 'دسترسی کامل به کتب، مضامین و سرفصل‌های درسی رسمی وزارت معارف از صنف هفتم تا دوازدهم با دسته‌بندی موضوعی، نمونه دروس، و برنامه‌ریزی تقویم درسی.'
+                : 'Full access to official academic curriculum and textbooks from Grade 7 to Grade 12, covering mathematics, sciences, languages, and university entrance examination preparation.'}
+            </Text>
+
+            {/* Grid of the 6 Academic Classes (7 to 12) */}
+            <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
+              {SCHOOL_CLASSES_TRACKS.map((gItem) => (
+                <TouchableOpacity
+                  key={gItem.grade}
+                  onPress={() => router.push({ pathname: '/(student)/school', params: { grade: `${gItem.grade}` } } as any)}
+                  activeOpacity={0.8}
+                  style={{
+                    flexBasis: Platform.OS === 'web' ? '31%' : '47%',
+                    flexGrow: 1,
+                    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(248, 250, 252, 0.85)',
+                    borderWidth: 1,
+                    borderColor: isDark ? 'rgba(250, 204, 21, 0.2)' : 'rgba(226, 232, 240, 0.9)',
+                    borderRadius: 16,
+                    padding: 12,
+                  }}
+                >
+                  <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: isDark ? 'rgba(250, 204, 21, 0.15)' : 'rgba(250, 204, 21, 0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.goldBorder }}>
+                      <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '800' }}>{gItem.grade}</Text>
+                    </View>
+                    <Text style={{ color: colors.gold, fontSize: 10, fontWeight: '700' }}>
+                      {isPersian ? 'نصاب رسمی' : 'Official'}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13, marginBottom: 4, textAlign: isPersian ? 'right' : 'left' }}>
+                    {isPersian ? gItem.fa : gItem.en}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 10.5, lineHeight: 15, textAlign: isPersian ? 'right' : 'left' }} numberOfLines={2}>
+                    {isPersian ? gItem.subjectsFa : gItem.subjectsEn}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Action Buttons: Apply Online & View Full School Portal */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+              <TouchableOpacity
+                onPress={() => router.push('/(student)/apply' as any)}
+                activeOpacity={0.85}
+                style={{
+                  backgroundColor: colors.gold,
+                  borderRadius: 16,
+                  paddingVertical: 14,
+                  paddingHorizontal: 22,
+                  flexDirection: isPersian ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  shadowColor: colors.gold,
+                  shadowOpacity: 0.25,
+                  shadowRadius: 10,
+                }}
+              >
+                <Text style={{ color: isDark ? '#0F172A' : '#FFFFFF', fontWeight: '900', fontSize: 13.5 }}>
+                  📝 {isPersian ? 'ثبت‌نام آنلاین در مکتب (فورم پذیرش)' : 'Apply for School Admission'}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
 
-          {/* Action Button: View Full School Portal */}
-          <TouchableOpacity
-            onPress={() => router.push('/(student)/school' as any)}
-            activeOpacity={0.85}
-            style={{
-              backgroundColor: colors.primary,
-              borderRadius: 16,
-              paddingVertical: 14,
-              paddingHorizontal: 20,
-              flexDirection: isPersian ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              shadowColor: colors.primary,
-              shadowOpacity: 0.25,
-              shadowRadius: 10,
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13.5 }}>
-              {isPersian ? 'مشاهده پورتال جامع مکتب رسمی دختران (صنوف ۷ تا ۱۲) ←' : 'View Full Academic School Portal (Grades 7–12) →'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                onPress={() => router.push('/(student)/school' as any)}
+                activeOpacity={0.85}
+                style={{
+                  backgroundColor: colors.cardHover,
+                  borderColor: colors.cardBorder,
+                  borderWidth: 1.5,
+                  borderRadius: 16,
+                  paddingVertical: 14,
+                  paddingHorizontal: 20,
+                  flexDirection: isPersian ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13.5 }}>
+                  {isPersian ? 'مشاهده نصاب و صنوف مکتب (۷-۱۲) ←' : 'View Full Curriculum (Grades 7–12) →'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* ── Guest CTA Footer Banner ── */}
         {!user && (
@@ -2105,26 +1942,6 @@ export default function StudentCatalogScreen() {
                 )}
               </ScrollView>
 
-              {isSchoolGradeCourse(selectedCourseForPreview) && (
-                <View
-                  style={{
-                    backgroundColor: isDark ? 'rgba(250, 204, 21, 0.08)' : 'rgba(250, 204, 21, 0.12)',
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: colors.goldBorder,
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    marginBottom: 10,
-                  }}
-                >
-                  <Text style={{ color: isDark ? '#FDE047' : '#854D0E', fontSize: 11.5, fontWeight: '600', textAlign: isPersian ? 'right' : 'left' }}>
-                    {isPersian
-                      ? 'توجه: ثبت‌نام در مکتب دختران تنها از طریق ایمیل انجام می‌شود؛ ثبت‌نام مستقیم غیرفعال است.'
-                      : 'Notice: Registration for Girls School is exclusively available via email (no direct registration).'}
-                  </Text>
-                </View>
-              )}
-
               <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', gap: 10, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : colors.cardBorder, paddingTop: 16 }}>
                 <TouchableOpacity
                   onPress={() => setSelectedCourseForPreview(null)}
@@ -2134,52 +1951,27 @@ export default function StudentCatalogScreen() {
                   <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 13 }}>{isPersian ? 'بستن' : 'Close'}</Text>
                 </TouchableOpacity>
 
-                {isSchoolGradeCourse(selectedCourseForPreview) ? (
-                  enrolledCourseIds.includes(selectedCourseForPreview.id) ? (
-                    <TouchableOpacity
-                      onPress={() => {
-                        const id = selectedCourseForPreview.id;
-                        setSelectedCourseForPreview(null);
-                        router.push(`/(student)/course/${id}` as any);
-                      }}
-                      activeOpacity={0.85}
-                      style={{
-                        flex: 2,
-                        backgroundColor: colors.gold,
-                        borderRadius: 14,
-                        paddingVertical: 12,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Text style={{ color: isDark ? '#0F172A' : '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
-                        {isPersian ? 'ورود به صنف' : 'Enter Grade'}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => {
-                        const gradeLabel = selectedCourseForPreview.grade ? `Grade ${selectedCourseForPreview.grade}` : (selectedCourseForPreview.title || 'School Grade');
-                        const subject = encodeURIComponent(`Girls School Registration: ${gradeLabel}`);
-                        const body = encodeURIComponent(`Hello Farukh Admissions Team,\n\nI would like to apply for registration in: ${gradeLabel}.\n\nStudent Full Name:\nGuardian Full Name:\nPhone / WhatsApp:\nCity / Province:\n\nThank you.`);
-                        setSelectedCourseForPreview(null);
-                        Linking.openURL(`mailto:info@farukh.org?subject=${subject}&body=${body}`);
-                      }}
-                      activeOpacity={0.85}
-                      style={{
-                        flex: 2,
-                        backgroundColor: colors.primary,
-                        borderRadius: 14,
-                        paddingVertical: 12,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>
-                        {isPersian ? 'ثبت‌نام از طریق ایمیل' : 'Register via Email'}
-                      </Text>
-                    </TouchableOpacity>
-                  )
+                {enrolledCourseIds.includes(selectedCourseForPreview.id) ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const id = selectedCourseForPreview.id;
+                      setSelectedCourseForPreview(null);
+                      router.push(`/(student)/course/${id}` as any);
+                    }}
+                    activeOpacity={0.85}
+                    style={{
+                      flex: 2,
+                      backgroundColor: colors.gold,
+                      borderRadius: 14,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ color: isDark ? '#0F172A' : '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
+                      {isPersian ? 'ورود به دوره' : 'Continue Course'}
+                    </Text>
+                  </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
                     onPress={() => {

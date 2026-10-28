@@ -170,7 +170,7 @@ export default function AdminDashboardScreen() {
 
   return (
     <ScreenWrapper>
-      <ScrollView className="flex-1 py-4 max-w-4xl w-full self-center">
+      <ScrollView className="flex-1 py-4 max-w-6xl w-full self-center px-4 md:px-6">
         {/* Admin Header Banner */}
         <View className="mb-6 bg-gradient-to-r from-brand-900 via-surface-card to-brand-800 p-6 rounded-3xl border border-gold-400/40 shadow-xl flex-row justify-between items-center flex-wrap gap-4">
           <View className="flex-1 min-w-[240px]">
@@ -199,32 +199,104 @@ export default function AdminDashboardScreen() {
           </View>
         </View>
 
-        {/* Quick Actions & Add Course Banner */}
-        <View className="flex-row justify-between items-center mb-6">
-          <View className="flex-1 mr-3">
-            <Text className="text-xl font-bold text-white">
-              {isPersian ? 'دوره‌های موجود' : 'Active Courses'}
-            </Text>
-            <Text className="text-xs text-slate-400">
-              {isPersian ? 'دوره‌ها را مدیریت کنید یا دوره جدید ایجاد نمایید' : 'Manage existing courses or create a new course for students'}
-            </Text>
+        {/* Quick Actions & Navigation Toolbar */}
+        <View className="mb-6 bg-surface-card/70 border border-surface-border/80 p-5 rounded-3xl shadow-xl">
+          {/* Header Row: Title & Primary + Add Course Action */}
+          <View
+            style={{
+              flexDirection: isPersian ? 'row-reverse' : 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 16,
+              marginBottom: 16,
+            }}
+          >
+            <View style={{ flex: 1, minWidth: 260 }}>
+              <Text
+                style={{
+                  fontSize: 22,
+                  fontWeight: '800',
+                  color: '#FFFFFF',
+                  textAlign: isPersian ? 'right' : 'left',
+                }}
+              >
+                {isPersian ? 'دوره‌های موجود' : 'Active Courses'}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: '#94A3B8',
+                  marginTop: 3,
+                  textAlign: isPersian ? 'right' : 'left',
+                }}
+              >
+                {isPersian
+                  ? 'دوره‌ها را مدیریت کنید، سرفصل‌ها را ویرایش کرده یا دوره جدید ایجاد نمایید'
+                  : 'Manage existing courses, edit syllabi, or create a new course for students'}
+              </Text>
+            </View>
+
+            <Button
+              title={showCreate ? (isPersian ? '✕ بستن فرم' : '✕ Close Form') : (isPersian ? '+ ایجاد دوره جدید' : '+ Add Course')}
+              variant={showCreate ? 'secondary' : 'primary'}
+              onPress={() => {
+                setShowCreate(!showCreate);
+                if (createdSuccessId) setCreatedSuccessId(null);
+              }}
+              className="shadow-lg shadow-brand-900"
+            />
           </View>
 
-          <View className="flex-row items-center gap-2">
+          {/* Flexible Tabs Bar */}
+          <View
+            style={{
+              flexDirection: isPersian ? 'row-reverse' : 'row',
+              flexWrap: 'wrap',
+              gap: 10,
+              alignItems: 'center',
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255, 255, 255, 0.08)',
+              paddingTop: 14,
+            }}
+          >
             <TouchableOpacity
               onPress={() => router.push('/admin/certificates' as any)}
               style={{
                 backgroundColor: '#1E293B',
                 borderColor: '#3B82F6',
                 borderWidth: 1,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 12,
+                flexDirection: 'row',
                 alignItems: 'center',
+                gap: 6,
               }}
             >
+              <Text style={{ fontSize: 14 }}>🎓</Text>
               <Text style={{ color: '#60A5FA', fontWeight: '800', fontSize: 13 }}>
-                🎓 {isPersian ? 'تصدیق‌نامه‌ها' : 'Certificates'}
+                {isPersian ? 'تصدیق‌نامه‌ها' : 'Certificates'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/admin/live' as any)}
+              style={{
+                backgroundColor: '#1E293B',
+                borderColor: '#10B981',
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>📅</Text>
+              <Text style={{ color: '#34D399', fontWeight: '800', fontSize: 13 }}>
+                {isPersian ? 'جلسات لایو' : 'Live Lessons'}
               </Text>
             </TouchableOpacity>
 
@@ -234,22 +306,83 @@ export default function AdminDashboardScreen() {
                 backgroundColor: '#1E293B',
                 borderColor: pendingAppsCount > 0 ? '#F59E0B' : '#334155',
                 borderWidth: 1,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 12,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
               }}
             >
+              <Text style={{ fontSize: 14 }}>👨‍🏫</Text>
               <Text style={{ color: '#FCD34D', fontWeight: '800', fontSize: 13 }}>
-                👨‍🏫 {isPersian ? 'متقاضیان مربی‌گری' : 'Instructor Apps'}
+                {isPersian ? 'متقاضیان مربی‌گری' : 'Instructor Apps'}
               </Text>
               {pendingAppsCount > 0 && (
-                <View style={{ backgroundColor: '#F59E0B', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 }}>
+                <View style={{ backgroundColor: '#F59E0B', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 1.5 }}>
                   <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 11 }}>{pendingAppsCount}</Text>
                 </View>
               )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/admin/school-applications' as any)}
+              style={{
+                backgroundColor: '#1E293B',
+                borderColor: '#EC4899',
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>🏫</Text>
+              <Text style={{ color: '#F472B6', fontWeight: '800', fontSize: 13 }}>
+                {isPersian ? 'درخواست‌های شاگردان مکتب' : 'School Student Apps'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/admin/school-teacher-applications' as any)}
+              style={{
+                backgroundColor: '#1E293B',
+                borderColor: '#F59E0B',
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>👩‍🏫</Text>
+              <Text style={{ color: '#FCD34D', fontWeight: '800', fontSize: 13 }}>
+                {isPersian ? 'متقاضیان تدریس مکتب' : 'School Teachers'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/admin/school-lessons' as any)}
+              style={{
+                backgroundColor: '#1E293B',
+                borderColor: '#8B5CF6',
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>📝</Text>
+              <Text style={{ color: '#A78BFA', fontWeight: '800', fontSize: 13 }}>
+                {isPersian ? 'بازبینی دروس مکتب' : 'School Lessons Review'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -258,19 +391,20 @@ export default function AdminDashboardScreen() {
                 backgroundColor: '#1E293B',
                 borderColor: pendingReviewsCount > 0 ? '#10B981' : '#334155',
                 borderWidth: 1,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 12,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
               }}
             >
+              <Text style={{ fontSize: 14 }}>📋</Text>
               <Text style={{ color: '#34D399', fontWeight: '800', fontSize: 13 }}>
-                📋 {isPersian ? 'صف بازبینی دوره‌ها' : 'Course Reviews'}
+                {isPersian ? 'صف بازبینی دوره‌ها' : 'Course Reviews'}
               </Text>
               {pendingReviewsCount > 0 && (
-                <View style={{ backgroundColor: '#10B981', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 }}>
+                <View style={{ backgroundColor: '#10B981', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 1.5 }}>
                   <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 11 }}>{pendingReviewsCount}</Text>
                 </View>
               )}
@@ -282,26 +416,19 @@ export default function AdminDashboardScreen() {
                 backgroundColor: '#1E293B',
                 borderColor: '#FACC15',
                 borderWidth: 1,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 12,
+                flexDirection: 'row',
                 alignItems: 'center',
+                gap: 6,
               }}
             >
+              <Text style={{ fontSize: 14 }}>✍️</Text>
               <Text style={{ color: '#FACC15', fontWeight: '800', fontSize: 13 }}>
-                ✍️ {isPersian ? 'وبلاگ' : 'Blog'}
+                {isPersian ? 'وبلاگ' : 'Blog'}
               </Text>
             </TouchableOpacity>
-
-            <Button
-              title={showCreate ? (isPersian ? 'بستن فرم' : 'Close Form') : (isPersian ? '+ ایجاد دوره جدید' : '+ Add Course')}
-              variant={showCreate ? 'secondary' : 'primary'}
-              onPress={() => {
-                setShowCreate(!showCreate);
-                if (createdSuccessId) setCreatedSuccessId(null);
-              }}
-              className="shadow-lg shadow-brand-900"
-            />
           </View>
         </View>
 

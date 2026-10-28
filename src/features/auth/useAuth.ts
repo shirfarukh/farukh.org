@@ -8,7 +8,7 @@ import {
   updateProfile,
   User,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from '@firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from '@firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { useAuthStore } from './authStore';
 
@@ -27,10 +27,13 @@ export function useAuth() {
     user,
     isAdmin,
     isInstructor,
+    isSchoolTeacher,
+    schoolTeacherApprovedGrades,
     role,
     instructorMode,
     loading,
     setUser,
+    setSchoolTeacherInfo,
     setInstructorMode,
     setLoading,
     logout: resetStore,
@@ -46,7 +49,20 @@ export function useAuth() {
         const hasInstructorClaim =
           !!idTokenResult.claims.instructor ||
           idTokenResult.claims.role === 'instructor';
-        setUser(auth.currentUser, hasAdminClaim, hasInstructorClaim);
+
+        // Check Firestore user profile for school teacher flags
+        let userTeacherFlag = false;
+        let userGrades: number[] = [];
+        try {
+          const uDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+          if (uDoc.exists()) {
+            const data = uDoc.data();
+            userTeacherFlag = !!data.isSchoolTeacher;
+            userGrades = Array.isArray(data.schoolTeacherApprovedGrades) ? data.schoolTeacherApprovedGrades : [];
+          }
+        } catch {}
+
+        setUser(auth.currentUser, hasAdminClaim, hasInstructorClaim, userTeacherFlag, userGrades);
       } catch (e) {
         console.warn('Failed to force refresh user claims:', e);
       }
@@ -64,10 +80,22 @@ export function useAuth() {
           const hasInstructorClaim =
             !hasAdminClaim &&
             (!!idTokenResult.claims.instructor || idTokenResult.claims.role === 'instructor');
-          setUser(currentUser, hasAdminClaim, hasInstructorClaim);
+
+          let userTeacherFlag = false;
+          let userGrades: number[] = [];
+          try {
+            const uDoc = await getDoc(doc(db, 'users', currentUser.uid));
+            if (uDoc.exists()) {
+              const data = uDoc.data();
+              userTeacherFlag = !!data.isSchoolTeacher;
+              userGrades = Array.isArray(data.schoolTeacherApprovedGrades) ? data.schoolTeacherApprovedGrades : [];
+            }
+          } catch {}
+
+          setUser(currentUser, hasAdminClaim, hasInstructorClaim, userTeacherFlag, userGrades);
         } catch {
           const isKnownAdmin = !!currentUser.email && KNOWN_ADMIN_EMAILS.includes(currentUser.email.toLowerCase());
-          setUser(currentUser, isKnownAdmin, false);
+          setUser(currentUser, isKnownAdmin, false, isKnownAdmin, isKnownAdmin ? [7, 8, 9, 10, 11, 12] : []);
         }
       } else {
         resetStore();
@@ -77,9 +105,10 @@ export function useAuth() {
     return () => unsubscribe();
   }, [setUser, resetStore]);
 
-  const login = async (email: string, pass: string) => {
+  const login = async (emailOrUsername: string, pass: string) => {
     setLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
+    const raw = emailOrUsername.trim();
+    const cleanEmail = (raw.includes('@') ? raw : `${raw}@student.farukh.org`).toLowerCase();
     const isAdminAccount = KNOWN_ADMIN_EMAILS.includes(cleanEmail);
     const candidatePasswords = [
       pass,
@@ -100,22 +129,34 @@ export function useAuth() {
           if (cred) break;
         } catch (err: any) {
           lastError = err;
-          // If user doesn't exist, don't keep trying passwords
           if (err.code === 'auth/user-not-found') break;
         }
       }
 
-      // If user still not authenticated and user does not exist yet (or admin auto-setup)
-      if (!cred && (lastError?.code === 'auth/user-not-found' || isAdminAccount)) {
+      // If user still not authenticated and account may not exist yet in Firebase Auth
+      const shouldAttemptCreate =
+        !cred &&
+        (lastError?.code === 'auth/user-not-found' ||
+          lastError?.code === 'auth/invalid-credential' ||
+          isAdminAccount ||
+          !raw.includes('@') ||
+          raw.toUpperCase().startsWith('FOE-'));
+
+      if (shouldAttemptCreate) {
         try {
           const createPass = pass.length >= 6 ? pass : '123456';
           cred = await createUserWithEmailAndPassword(auth, cleanEmail, createPass);
           await updateProfile(cred.user, {
-            displayName: isAdminAccount ? 'Shir Farukh (Admin)' : 'Student User',
+            displayName: isAdminAccount
+              ? 'Shir Farukh (Admin)'
+              : raw.includes('@')
+              ? 'Student User'
+              : raw.toUpperCase(),
           });
         } catch (createErr: any) {
+          // If the email is already in use, the user genuinely typed the wrong password
           if (createErr.code !== 'auth/email-already-in-use') {
-            throw createErr;
+            console.warn('createUser fallback error:', createErr);
           }
         }
       }
@@ -131,7 +172,7 @@ export function useAuth() {
             {
               uid: cred.user.uid,
               email: cleanEmail,
-              displayName: cred.user.displayName || (isAdminAccount ? 'Shir Farukh (Admin)' : 'Student User'),
+              displayName: cred.user.displayName || (isAdminAccount ? 'Shir Farukh (Admin)' : (raw.includes('@') ? 'Student User' : raw.toUpperCase())),
               role: isAdminAccount ? 'admin' : 'student',
               updatedAt: serverTimestamp(),
             },
@@ -187,6 +228,8 @@ export function useAuth() {
     user,
     isAdmin,
     isInstructor,
+    isSchoolTeacher,
+    schoolTeacherApprovedGrades,
     role,
     instructorMode,
     setInstructorMode,

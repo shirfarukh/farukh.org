@@ -131,6 +131,25 @@ export default function InstructorLayout() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          onPress={() => router.push('/instructor/school-lessons' as any)}
+          style={{
+            paddingVertical: 10,
+            borderBottomWidth: pathname.includes('/school-lessons') ? 2 : 0,
+            borderBottomColor: colors.gold,
+          }}
+        >
+          <Text
+            style={{
+              color: pathname.includes('/school-lessons') ? colors.gold : colors.textSecondary,
+              fontWeight: pathname.includes('/school-lessons') ? '800' : '600',
+              fontSize: 13,
+            }}
+          >
+            🏫 {isPersian ? 'درس‌های مکتب' : 'School Lessons'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           onPress={() => router.push('/instructor/requests' as any)}
           style={{
             paddingVertical: 10,
@@ -159,7 +178,9 @@ export default function InstructorLayout() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="courses/[courseId]" />
+        <Stack.Screen name="school-lessons/index" />
         <Stack.Screen name="requests" />
+        <Stack.Screen name="live/index" />
       </Stack>
     </View>
   );

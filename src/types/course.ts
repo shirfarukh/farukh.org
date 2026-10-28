@@ -13,7 +13,6 @@ export const COURSE_CATEGORIES = [
   'Ecommerce',
   'Languages',
   'Morals',
-  'School Grades',
 ] as const;
 
 export type CourseCategory = typeof COURSE_CATEGORIES[number];

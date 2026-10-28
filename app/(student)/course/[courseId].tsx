@@ -24,6 +24,8 @@ import {
 import { getCourseModules, getCourseLessons } from '../../../src/features/admin/adminApi';
 import { getUserCertificates } from '../../../src/features/certificates/certificatesApi';
 import { QuizQuestion } from '../../../src/types/quiz';
+import { getUpcomingLiveSessions, toggleRsvpLiveSession } from '../../../src/features/live/liveApi';
+import { LiveSessionCard } from '../../../src/components/live/LiveSessionCard';
 
 export default function StudentCourseDetailScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
@@ -84,6 +86,12 @@ export default function StudentCourseDetailScreen() {
     queryKey: ['userCertificates', user?.uid],
     queryFn: () => (user?.uid ? getUserCertificates(user.uid) : Promise.resolve([])),
     enabled: !!user?.uid,
+  });
+
+  const { data: courseLiveSessions = [] } = useQuery({
+    queryKey: ['courseLiveSessions', courseId],
+    queryFn: () => getUpcomingLiveSessions(courseId!),
+    enabled: !!courseId,
   });
 
   const enrollMutation = useMutation({
@@ -246,15 +254,7 @@ export default function StudentCourseDetailScreen() {
   const missingLessonsCount = Math.max(0, publishedLessons.length - completedCount);
   const allLessonsCompleted = (publishedLessons.length === 0 || missingLessonsCount === 0) && allModulesPassed;
   const isFinalExamUnlocked = allLessonsCompleted || isAdmin;
-  const isSchoolGrade = Boolean(
-    course?.category === 'School Grades' ||
-    course?.category?.toLowerCase().includes('school') ||
-    course?.category?.toLowerCase().includes('grade') ||
-    course?.title?.toLowerCase().includes('grade') ||
-    course?.title?.toLowerCase().includes('school') ||
-    course?.faTitle?.includes('صنف') ||
-    course?.faTitle?.includes('مکتب')
-  );
+
 
   return (
     <ScreenWrapper>
@@ -356,26 +356,6 @@ export default function StudentCourseDetailScreen() {
                 variant="primary"
                 onPress={() => router.push(`/(student)/exam/${courseId}` as any)}
               />
-            ) : isSchoolGrade && completedCount === 0 ? (
-              <View style={{ gap: 8, width: '100%' }}>
-                <View style={{ backgroundColor: isDark ? 'rgba(250, 204, 21, 0.08)' : 'rgba(250, 204, 21, 0.12)', borderWidth: 1, borderColor: colors.goldBorder, borderRadius: 12, padding: 10 }}>
-                  <Text style={{ color: isDark ? '#FDE047' : '#854D0E', fontSize: 12, fontWeight: '600', textAlign: isPersian ? 'right' : 'left' }}>
-                    {isPersian
-                      ? 'توجه: ثبت‌نام در مکتب دختران تنها از طریق درخواست ایمیل انجام می‌شود؛ ثبت‌نام مستقیم غیرفعال است.'
-                      : 'Notice: Registration for Girls School is exclusively available via email application (no direct registration).'}
-                  </Text>
-                </View>
-                <Button
-                  title={isPersian ? "ثبت‌نام از طریق ایمیل" : "Register via Email"}
-                  variant="primary"
-                  onPress={() => {
-                    const gradeLabel = course.title || 'School Grade';
-                    const subject = encodeURIComponent(`Girls School Registration: ${gradeLabel}`);
-                    const body = encodeURIComponent(`Hello Farukh Admissions Team,\n\nI would like to apply for registration in: ${gradeLabel}.\n\nStudent Full Name:\nGuardian Full Name:\nPhone / WhatsApp:\nCity / Location:\n\nThank you.`);
-                    Linking.openURL(`mailto:info@farukh.org?subject=${subject}&body=${body}`);
-                  }}
-                />
-              </View>
             ) : (
               <Button
                 title="Enroll / Continue"
@@ -386,6 +366,38 @@ export default function StudentCourseDetailScreen() {
             )}
           </View>
         </Card>
+
+        {/* Live Sessions & Google Meet Calls Section */}
+        {courseLiveSessions.length > 0 && (
+          <View style={{ marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 20 }}>📹</Text>
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>
+                  {isPersian ? 'جلسات لایو و وبینارهای این دوره' : 'Live Lessons & Google Meet Calls'}
+                </Text>
+              </View>
+              <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: '#EF4444', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                <Text style={{ color: '#EF4444', fontSize: 10, fontWeight: '800' }}>
+                  {courseLiveSessions.length} {isPersian ? 'جلسه' : 'SCHEDULED'}
+                </Text>
+              </View>
+            </View>
+
+            {courseLiveSessions.map((session) => (
+              <LiveSessionCard
+                key={session.id}
+                session={session}
+                currentUserId={user?.uid}
+                onToggleRsvp={async (sessId, currentlyAttending) => {
+                  if (!user) return;
+                  await toggleRsvpLiveSession(sessId, user.uid, currentlyAttending);
+                  queryClient.invalidateQueries({ queryKey: ['courseLiveSessions', courseId] });
+                }}
+              />
+            ))}
+          </View>
+        )}
 
         {/* Modules & Lessons Outline */}
         <View className="flex-row justify-between items-center mb-3">

@@ -39,10 +39,17 @@ function StudentLayoutContent() {
 
   const isWeb = Platform.OS === 'web';
 
-  const navItems = [
+  const navItems: Array<{
+    label: string;
+    path: string;
+    icon: string;
+    protected?: boolean;
+    special?: boolean;
+    badge?: string;
+  }> = [
     { label: isPersian ? 'دوره‌های آموزشی' : 'Courses', path: '/(student)', icon: '📚' },
     {
-      label: isPersian ? 'مکتب رسمی دختران' : 'Girls Academic School',
+      label: isPersian ? 'صنوف درسی مکتب' : 'School Classes',
       path: '/(student)/school',
       icon: '🎓',
       special: true,
@@ -756,6 +763,7 @@ function StudentLayoutContent() {
             <Stack.Screen name="lesson/[courseId]/[lessonId]" options={{ headerShown: false }} />
             <Stack.Screen name="exam/[courseId]" options={{ headerShown: false }} />
             <Stack.Screen name="certificates" options={{ headerShown: false }} />
+            <Stack.Screen name="live/index" options={{ headerShown: false }} />
             <Stack.Screen name="profile" options={{ headerShown: false }} />
           </Stack>
         </View>

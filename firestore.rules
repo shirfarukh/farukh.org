@@ -242,5 +242,71 @@ service cloud.firestore {
                        request.resource.data.message is string;
       allow read, update, delete: if isAdmin();
     }
+
+    // Live Lessons & Google Meet Scheduling
+    match /liveSessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || (
+        isInstructor() &&
+        request.resource.data.instructorId == request.auth.uid
+      );
+      allow update: if isAdmin() || (
+        isInstructor() &&
+        resource.data.instructorId == request.auth.uid &&
+        request.resource.data.instructorId == request.auth.uid
+      ) || (
+        // Allow students to RSVP
+        isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendeeUids', 'attendeeCount'])
+      );
+      allow delete: if isAdmin() || (
+        isInstructor() &&
+        resource.data.instructorId == request.auth.uid
+      );
+    }
+
+    // Girl School Admissions / Student Applications (Public create, Admin manage, Owner read)
+    match /schoolApplications/{applicationId} {
+      allow create: if request.resource.data.studentFullName is string &&
+                       request.resource.data.guardianFullName is string &&
+                       request.resource.data.guardianPhone is string &&
+                       request.resource.data.targetGrade is number;
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // Girl School Teacher Applications (Public create, Admin manage, Owner read)
+    match /schoolTeacherApplications/{applicationId} {
+      allow create: if request.resource.data.fullName is string &&
+                       request.resource.data.phone is string &&
+                       request.resource.data.email is string &&
+                       request.resource.data.girlsSchoolName is string;
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // Girl School Lessons Created by Approved Teachers (Admin oversight, draft -> in_review -> published)
+    match /schoolLessons/{lessonId} {
+      allow read: if resource.data.status == 'published' ||
+                     isAdmin() ||
+                     (isAuthenticated() && resource.data.teacherId == request.auth.uid);
+      allow create: if isAdmin() || (
+        isAuthenticated() &&
+        request.resource.data.teacherId == request.auth.uid &&
+        request.resource.data.status in ['draft', 'in_review']
+      );
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.teacherId == request.auth.uid &&
+        request.resource.data.teacherId == request.auth.uid &&
+        resource.data.status != 'published' &&
+        request.resource.data.status in ['draft', 'in_review']
+      );
+      allow delete: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.teacherId == request.auth.uid &&
+        resource.data.status == 'draft'
+      );
+    }
   }
 }

@@ -7,6 +7,10 @@ export const UserProfileSchema = z.object({
   photoURL: z.string().optional(),
   createdAt: z.any().optional(),
   disabled: z.boolean().default(false),
+  approvedSchoolGrades: z.array(z.number()).default([]),
+  isSchoolTeacher: z.boolean().default(false),
+  schoolTeacherApprovedGrades: z.array(z.number()).default([]),
+  schoolTeacherStatus: z.string().optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;

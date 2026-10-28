@@ -12,10 +12,11 @@ import { useAuth } from '../../src/features/auth/useAuth';
 import { useAuthStore } from '../../src/features/auth/authStore';
 import { useTheme } from '../../src/features/theme/ThemeContext';
 import { ThemeToggle } from '../../src/components/ui/ThemeToggle';
-import { doc, setDoc } from '@firebase/firestore';
+import { doc, setDoc, getDoc } from '@firebase/firestore';
 import { db } from '../../src/lib/firebase';
 import { getUserCertificates } from '../../src/features/certificates/certificatesApi';
 import { getInstructorApplication } from '../../src/features/instructor/instructorApi';
+import { getUserSchoolApplications } from '../../src/features/school/schoolApplicationApi';
 import { useTranslation } from 'react-i18next';
 
 export default function ProfileScreen() {
@@ -43,6 +44,45 @@ export default function ProfileScreen() {
     queryFn: () => (user?.uid ? getInstructorApplication(user.uid) : Promise.resolve(null)),
     enabled: !!user?.uid && !isAdmin && !isInstructor,
   });
+
+  // Fetch school applications & user profile for approved grades
+  const { data: userApplications = [] } = useQuery({
+    queryKey: ['userSchoolApplications', user?.uid, user?.email],
+    queryFn: () => getUserSchoolApplications(user?.uid, user?.email || undefined),
+    enabled: !!(user?.uid || user?.email),
+  });
+
+  const { data: userDocData } = useQuery({
+    queryKey: ['userProfileDoc', user?.uid],
+    queryFn: async () => {
+      if (!user?.uid) return null;
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        return snap.exists() ? snap.data() : null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!user?.uid,
+  });
+
+  const approvedSchoolGrades = React.useMemo(() => {
+    const set = new Set<number>();
+    userApplications.forEach((app) => {
+      if (app.status === 'accepted' && app.targetGrade) {
+        set.add(Number(app.targetGrade));
+      }
+    });
+    if (set.size === 0 && userDocData?.approvedSchoolGrades && Array.isArray(userDocData.approvedSchoolGrades)) {
+      const explicitRequested = userDocData?.targetGrade || userDocData?.schoolGrade || userDocData?.requestedGrade;
+      if (explicitRequested && userDocData.approvedSchoolGrades.includes(Number(explicitRequested))) {
+        set.add(Number(explicitRequested));
+      } else if (userDocData.approvedSchoolGrades.length > 0) {
+        set.add(Number(userDocData.approvedSchoolGrades[0]));
+      }
+    }
+    return Array.from(set);
+  }, [userDocData, userApplications]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -87,6 +127,68 @@ export default function ProfileScreen() {
             variant={isAdmin ? 'warning' : isInstructor ? 'success' : 'info'}
           />
         </View>
+
+        {/* 🎓 ENROLLED SCHOOL GRADES (FOR ACCEPTED STUDENTS) */}
+        {approvedSchoolGrades.length > 0 && (
+          <Card
+            style={{
+              backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : '#ECFDF5',
+              borderColor: isDark ? '#10B981' : '#A7F3D0',
+              borderWidth: 1.5,
+              padding: 16,
+              marginBottom: 18,
+              borderRadius: 20,
+            }}
+          >
+            <View className="flex-row items-center justify-between mb-3">
+              <View className="flex-row items-center gap-2.5">
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    backgroundColor: isDark ? '#065F46' : '#D1FAE5',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>🎓</Text>
+                </View>
+                <View>
+                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>
+                    {isPersian ? 'صنف رسمی مکتب (شمولیت تأیید شده)' : 'Enrolled School Grade (Approved)'}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                    {isPersian ? 'دسترسی کامل به کتب، دروس و ویدیوها فعال است' : 'Full access to curriculum materials active'}
+                  </Text>
+                </View>
+              </View>
+              <Badge label={isPersian ? 'تأیید شده' : 'APPROVED'} variant="success" />
+            </View>
+
+            <View style={{ flexDirection: isPersian ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+              {approvedSchoolGrades.map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  onPress={() => router.push({ pathname: '/(student)/school', params: { grade: String(g) } } as any)}
+                  style={{
+                    backgroundColor: '#10B981',
+                    borderRadius: 12,
+                    paddingVertical: 10,
+                    paddingHorizontal: 16,
+                    alignItems: 'center',
+                    flexDirection: isPersian ? 'row-reverse' : 'row',
+                    gap: 6,
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
+                    📚 {isPersian ? `ورود به صنف ${g} و مشاهده مواد درسی` : `Enter Grade ${g} Class`} →
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Card>
+        )}
 
         {/* 🎓 INSTRUCTOR PORTAL CARD (FOR INSTRUCTORS & ADMINS) */}
         {(isInstructor || isAdmin) && (

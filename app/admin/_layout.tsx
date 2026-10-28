@@ -40,6 +40,10 @@ export default function AdminLayout() {
       <Stack.Screen name="courses/[courseId]" options={{ title: 'Edit Course' }} />
       <Stack.Screen name="instructor-applications/index" options={{ title: 'Instructor Applications' }} />
       <Stack.Screen name="reviews/index" options={{ title: 'Course Review Queue' }} />
+      <Stack.Screen name="live/index" options={{ title: 'Live Lessons & Calendar' }} />
+      <Stack.Screen name="school-applications/index" options={{ title: 'School Student Applications' }} />
+      <Stack.Screen name="school-teacher-applications/index" options={{ title: 'School Teacher Applications' }} />
+      <Stack.Screen name="school-lessons/index" options={{ title: 'School Lessons Review' }} />
     </Stack>
   );
 }

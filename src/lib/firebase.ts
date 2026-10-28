@@ -46,7 +46,12 @@ try {
   try {
     auth = getAuth(app);
   } catch {
-    throw e;
+    try {
+      auth = initializeAuth(app);
+    } catch {
+      console.warn('Firebase Auth failed to initialize during startup:', e);
+      auth = {} as any;
+    }
   }
 }
 

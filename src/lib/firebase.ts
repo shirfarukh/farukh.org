@@ -31,16 +31,22 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 let auth: ReturnType<typeof getAuth>;
 try {
-  auth = Platform.OS === 'web'
-    ? getAuth(app)
-    : initializeAuth(app, {
-        persistence: getReactNativePersistence(AsyncStorage),
-      });
-} catch (e: any) {
-  if (e?.code === 'auth/already-initialized') {
+  if (Platform.OS === 'web') {
     auth = getAuth(app);
   } else {
-    throw e; // surface the real error instead of masking it
+    const persistence =
+      typeof getReactNativePersistence === 'function'
+        ? getReactNativePersistence(AsyncStorage)
+        : undefined;
+    auth = persistence
+      ? initializeAuth(app, { persistence })
+      : getAuth(app);
+  }
+} catch (e: any) {
+  try {
+    auth = getAuth(app);
+  } catch {
+    throw e;
   }
 }
 
